@@ -2,7 +2,7 @@ package handler
 
 import (
 	"context"
-	"cta/logs"
+	"cta/common/logs"
 	"cta/rpc/thrift/gen-go/tc"
 )
 

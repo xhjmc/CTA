@@ -1,7 +1,7 @@
 package server
 
 import (
-	"cta/logs"
+	"cta/common/logs"
 	"cta/rpc/thrift/config"
 	"cta/rpc/thrift/factory"
 	"cta/util"
@@ -67,8 +67,8 @@ func (s *ThriftServer) Init() {
 }
 
 func (s *ThriftServer) Run() error {
-	transportFactory := factory.GetTTransportFactory(s.thriftConfig.BufferSize, s.thriftConfig.Framed)
-	protocolFactory, err := factory.GetTProtocolFactory(s.thriftConfig.Protocol)
+	transportFactory := factory.NewTTransportFactory(s.thriftConfig.BufferSize, s.thriftConfig.Framed)
+	protocolFactory, err := factory.NewTProtocolFactory(s.thriftConfig.Protocol)
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,7 @@
 package server
 
 import (
-	"cta/logs"
+	"cta/common/logs"
 	"cta/rpc/thrift/gen-go/tc"
 	"cta/rpc/thrift/handler"
 	"sync"

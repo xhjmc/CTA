@@ -21,9 +21,9 @@ func NewTClientWithAddr(conf *config.ThriftConfig, addr string) (*ThriftClient, 
 }
 
 func NewTClientWithConn(conf *config.ThriftConfig, conn net.Conn) (*ThriftClient, error) {
-	transportFactory := factory.GetTTransportFactory(conf.BufferSize, conf.Framed)
+	transportFactory := factory.NewTTransportFactory(conf.BufferSize, conf.Framed)
 
-	protocolFactory, err := factory.GetTProtocolFactory(conf.Protocol)
+	protocolFactory, err := factory.NewTProtocolFactory(conf.Protocol)
 	if err != nil {
 		return nil, err
 	}

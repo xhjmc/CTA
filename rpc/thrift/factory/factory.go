@@ -5,7 +5,7 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
-func GetTProtocolFactory(protocol string) (thrift.TProtocolFactory, error) {
+func NewTProtocolFactory(protocol string) (thrift.TProtocolFactory, error) {
 	var protocolFactory thrift.TProtocolFactory
 	switch protocol {
 	case "compact":
@@ -22,7 +22,7 @@ func GetTProtocolFactory(protocol string) (thrift.TProtocolFactory, error) {
 	return protocolFactory, nil
 }
 
-func GetTTransportFactory(bufferSize int, framed bool) thrift.TTransportFactory {
+func NewTTransportFactory(bufferSize int, framed bool) thrift.TTransportFactory {
 	var transportFactory thrift.TTransportFactory
 	if bufferSize > 0 {
 		transportFactory = thrift.NewTBufferedTransportFactory(bufferSize)

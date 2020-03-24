@@ -3,8 +3,8 @@ package client
 import (
 	"context"
 	"cta/common/addrgetter"
+	"cta/common/logs"
 	"cta/common/pool"
-	"cta/logs"
 	"cta/rpc/thrift/config"
 	"cta/rpc/thrift/gen-go/tc"
 	"fmt"
