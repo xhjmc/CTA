@@ -7,7 +7,6 @@ const (
 	DELETE
 	UPDATE
 	SELECT
-	SELECT_FOR_UPDATE
 )
 
 func (t SQLType) String() string {
@@ -20,8 +19,6 @@ func (t SQLType) String() string {
 		return "UPDATE"
 	case SELECT:
 		return "SELECT"
-	case SELECT_FOR_UPDATE:
-		return "SELECT_FOR_UPDATE"
 	default:
 		return "Unknown"
 	}

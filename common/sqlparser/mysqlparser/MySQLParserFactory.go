@@ -6,8 +6,7 @@ import (
 	"github.com/xwb1989/sqlparser"
 )
 
-type MySQLParserFactory struct {
-}
+type MySQLParserFactory struct {}
 
 var mySQLParserFactory *MySQLParserFactory
 
@@ -33,7 +32,7 @@ func (f *MySQLParserFactory) NewSQLParser(sql string) (model.SQLParser, error) {
 	case *sqlparser.Update:
 		return NewMySQLUpdateParser(sql, stmt), nil
 	case *sqlparser.Select:
-		// todo
+		return NewMySQLSelectParser(sql, stmt), nil
 	default:
 		return nil, errors.New("sql parser just only support Insert/Delete/Update/Select")
 	}

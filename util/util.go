@@ -2,6 +2,7 @@ package util
 
 import (
 	"errors"
+	"reflect"
 	"strconv"
 	"time"
 )
@@ -12,8 +13,7 @@ func Retry(retryTimes int, retryInterval time.Duration, f func() bool) bool {
 		return true
 	}
 	for i := 0; i < retryTimes; i++ {
-		b := f()
-		if b {
+		if f() {
 			return true
 		}
 		time.Sleep(retryInterval)
@@ -57,6 +57,37 @@ func Interface2Int64(item interface{}) (int64, error) {
 	}
 }
 
+func Interface2Float64(item interface{}) (float64, error) {
+	switch val := item.(type) {
+	case byte:
+		return float64(val), nil
+	case bool:
+		if val {
+			return 1, nil
+		} else {
+			return 0, nil
+		}
+	case int:
+		return float64(val), nil
+	case int8:
+		return float64(val), nil
+	case int16:
+		return float64(val), nil
+	case int32:
+		return float64(val), nil
+	case int64:
+		return float64(val), nil
+	case float32:
+		return float64(val), nil
+	case float64:
+		return val, nil
+	case string:
+		return strconv.ParseFloat(val, 64)
+	default:
+		return 0, errors.New("unsupported type")
+	}
+}
+
 func Interface2Bool(item interface{}) (bool, error) {
 	switch val := item.(type) {
 	case byte:
@@ -82,4 +113,37 @@ func Interface2Bool(item interface{}) (bool, error) {
 	default:
 		return false, errors.New("unsupported type")
 	}
+}
+
+func Interface2String(item interface{}) (string, bool) {
+	switch val := item.(type) {
+	case string:
+		return val, true
+	case []byte:
+		return string(val), true
+	default:
+		return "", false
+	}
+}
+
+func InterfaceEqual(x, y interface{}) bool {
+	xstr, xok := Interface2String(x)
+	ystr, yok := Interface2String(y)
+	if xok && yok {
+		return xstr == ystr
+	}
+	if xok || yok {
+		return false
+	}
+
+	xfloat, xerr := Interface2Float64(x)
+	yfloat, yerr := Interface2Float64(y)
+	if xerr == nil && yerr == nil {
+		return xfloat == yfloat
+	}
+	if xerr == nil || yerr == nil {
+		return false
+	}
+
+	return reflect.DeepEqual(x, y)
 }

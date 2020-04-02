@@ -32,17 +32,16 @@ func (p *MySQLInsertParser) GetSQL() string {
 	return p.sql
 }
 
-func (p *MySQLInsertParser) GetColumns() []string {
-	pool := util.GetTrackedBufferPool()
-	buff := pool.Get()
-	defer pool.Put(buff)
-
+func (p *MySQLInsertParser) GetInsertColumns() []string {
 	cols := make([]string, len(p.stmt.Columns), len(p.stmt.Columns))
-	for i, col := range p.stmt.Columns {
-		buff.WriteNode(col)
-		cols[i] = buff.String()
-		buff.Reset()
-	}
+	pool := util.GetTrackedBufferPool()
+	pool.Handle(func(buff *sqlparser.TrackedBuffer) {
+		for i, col := range p.stmt.Columns {
+			buff.WriteNode(col)
+			cols[i] = buff.String()
+			buff.Reset()
+		}
+	})
 	return cols
 }
 

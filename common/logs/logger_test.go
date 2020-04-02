@@ -1,29 +1,30 @@
-package logs
+package logs_test
 
 import (
+	"cta/common/logs"
 	"testing"
 )
 
 func TestStandardLogger(t *testing.T) {
-	Info("this is info", "Info")
-	Warn("this is warn", "Warn")
+	logs.Info("this is info", "Info")
+	logs.Warn("this is warn", "Warn")
 	func() {
 		defer func() {
 			recover()
 		}()
-		Panic("this is panic", "Panic")
+		logs.Panic("this is panic", "Panic")
 	}()
-	Fatal("this is fatal", "Fatal")
+	logs.Fatal("this is fatal", "Fatal")
 }
 
 func TestStandardLoggerFormat(t *testing.T) {
-	Infof("this is info %s", "Infof")
-	Warnf("this is warn %s", "Warnf")
+	logs.Infof("this is info %s", "Infof")
+	logs.Warnf("this is warn %s", "Warnf")
 	func() {
 		defer func() {
 			recover()
 		}()
-		Panicf("this is panic %s", "Panicf")
+		logs.Panicf("this is panic %s", "Panicf")
 	}()
-	Fatalf("this is fatal %s", "Fatalf")
+	logs.Fatalf("this is fatal %s", "Fatalf")
 }

@@ -1,9 +1,10 @@
-package server
+package server_test
 
 import (
 	"cta/common/logs"
 	"cta/rpc/thrift/gen-go/tc"
 	"cta/rpc/thrift/handler"
+	"cta/rpc/thrift/server"
 	"sync"
 	"testing"
 )
@@ -20,7 +21,7 @@ func TestNewServer(t *testing.T) {
 			defer wg.Done()
 			processor := tc.NewTCServiceProcessor(&handler.TCServiceHandler{})
 
-			s := NewThriftServer(addr, processor)
+			s := server.NewThriftServer(addr, processor)
 			s.SetConf(nil)
 			s.Init()
 			if err := s.Run(); err != nil {

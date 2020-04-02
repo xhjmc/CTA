@@ -1,16 +1,19 @@
-package sqlparser
+package sqlparser_test
 
 import (
+	"cta/common/sqlparser"
 	"cta/common/sqlparser/model"
 	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/xwb1989/sqlparser"
+	parser "github.com/xwb1989/sqlparser"
 	"testing"
 )
 
+const MySQL = "mysql"
+
 func TestParser(t *testing.T) {
-	db, _ := sql.Open("mysql", "jmc:chenjinming@tcp(127.0.0.1:3306)/cta?charset=utf8")
+	db, _ := sql.Open(MySQL, "jmc:chenjinming@tcp(127.0.0.1:3306)/cta?charset=utf8")
 	q := "select * from test where id = :v1;"
 	res := db.QueryRow(q, 1)
 	var a, b interface{}
@@ -24,35 +27,35 @@ func TestParser(t *testing.T) {
 		"delete from tbl where a = ? and b = 'bbb' and c = 1 and d = 0.5 and e = true;",
 	}
 	for _, sql := range sqls {
-		stmt, err := sqlparser.Parse(sql)
+		stmt, err := parser.Parse(sql)
 		if err != nil {
 			// Do something with the err
 		}
 		fmt.Println(stmt, err)
 		// Otherwise do something with stmt
 		switch stmt := stmt.(type) {
-		case *sqlparser.Select:
+		case *parser.Select:
 			fmt.Println("select", stmt)
-		case *sqlparser.Insert:
+		case *parser.Insert:
 			fmt.Println("insert", stmt)
-		case *sqlparser.Update:
+		case *parser.Update:
 			fmt.Println("update", stmt)
-			query := sqlparser.Select{
-				SelectExprs: []sqlparser.SelectExpr{
-					&sqlparser.StarExpr{},
+			query := parser.Select{
+				SelectExprs: []parser.SelectExpr{
+					&parser.StarExpr{},
 				},
 				From:  stmt.TableExprs,
 				Where: stmt.Where,
 			}
-			buf := sqlparser.NewTrackedBuffer(nil)
+			buf := parser.NewTrackedBuffer(nil)
 			query.Format(buf)
 			querySql := buf.String()
 			fmt.Println(querySql)
-		case *sqlparser.Delete:
+		case *parser.Delete:
 			fmt.Println("delete", stmt)
 		}
 
-		buf := sqlparser.NewTrackedBuffer(nil)
+		buf := parser.NewTrackedBuffer(nil)
 		stmt.Format(buf)
 		fmt.Println(buf.String())
 	}
@@ -60,16 +63,16 @@ func TestParser(t *testing.T) {
 
 func TestSQLInsertParser(t *testing.T) {
 	sql := "insert into tbl(a,b,c) values(?, 'bbb', 1), (0.5, true, nowtime());"
-	stmt, _ := sqlparser.Parse(sql)
+	stmt, _ := parser.Parse(sql)
 
-	if stmt, ok := stmt.(*sqlparser.Insert); ok {
+	if stmt, ok := stmt.(*parser.Insert); ok {
 		fmt.Println("table name:", stmt.Table.Name)
 		for _, col := range stmt.Columns {
 			fmt.Printf("\t%s", col.String())
 		}
 		fmt.Println()
-		if rows, ok := stmt.Rows.(sqlparser.Values); ok {
-			buff := sqlparser.NewTrackedBuffer(nil)
+		if rows, ok := stmt.Rows.(parser.Values); ok {
+			buff := parser.NewTrackedBuffer(nil)
 			for _, row := range rows {
 				for _, expr := range row {
 					expr.Format(buff)
@@ -81,10 +84,10 @@ func TestSQLInsertParser(t *testing.T) {
 		}
 	}
 
-	buf := sqlparser.NewTrackedBuffer(func(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {
-		if node, ok := node.(*sqlparser.SQLVal); ok {
+	buf := parser.NewTrackedBuffer(func(buf *parser.TrackedBuffer, node parser.SQLNode) {
+		if node, ok := node.(*parser.SQLVal); ok {
 			switch node.Type {
-			case sqlparser.ValArg:
+			case parser.ValArg:
 				buf.WriteArg("?")
 				return
 			}
@@ -98,7 +101,7 @@ func TestSQLInsertParser(t *testing.T) {
 
 func TestMySQLInsertParser(t *testing.T) {
 	query := "insert into db.tbl(a,b,c) values(?, 'bbb', 1), (0.5, true, nowtime());"
-	factory := GetSQLParserFactory(MySQLParserFactoryKey)
+	factory := sqlparser.GetSQLParserFactory(MySQL)
 	parser, err := factory.NewSQLParser(query)
 	if err != nil {
 		panic(err)
@@ -107,13 +110,13 @@ func TestMySQLInsertParser(t *testing.T) {
 	fmt.Println(insertParser.GetSQL())
 	fmt.Println(insertParser.GetSQLType().String())
 	fmt.Println(insertParser.GetTableName())
-	fmt.Println(insertParser.GetColumns())
+	fmt.Println(insertParser.GetInsertColumns())
 	fmt.Println(insertParser.GetRows())
 }
 
 func TestMySQLDeleteParser(t *testing.T) {
 	query := "delete from db.tbl where a = ? and b = 'bbb' and c = 1 and d = 0.5 and e = true;"
-	factory := GetSQLParserFactory(MySQLParserFactoryKey)
+	factory := sqlparser.GetSQLParserFactory(MySQL)
 	parser, err := factory.NewSQLParser(query)
 	if err != nil {
 		panic(err)
@@ -126,8 +129,8 @@ func TestMySQLDeleteParser(t *testing.T) {
 }
 
 func TestMySQLUpdateParser(t *testing.T) {
-	query := "update tbl1 as t1, tbl2 as t2 set t1.a = t2.b, t2.a = t1.b where t1.a = t2.a;"
-	factory := GetSQLParserFactory(MySQLParserFactoryKey)
+	query := "update t0, tbl1 t1, tbl2 as t2 set t1.a = t2.b, t2.a = t1.b, c = ? where t1.a = t2.a and c = ?;"
+	factory := sqlparser.GetSQLParserFactory(MySQL)
 	parser, err := factory.NewSQLParser(query)
 	if err != nil {
 		panic(err)
@@ -136,6 +139,25 @@ func TestMySQLUpdateParser(t *testing.T) {
 	fmt.Println(updateParser.GetSQL())
 	fmt.Println(updateParser.GetSQLType().String())
 	fmt.Println(updateParser.GetTableName())
-	fmt.Println(updateParser.GetCondition())
+	fmt.Println(updateParser.GetTableList())
 	fmt.Println(updateParser.GetUpdateColumns())
+	fmt.Println(updateParser.GetCondition())
+	fmt.Println(updateParser.CountPlaceholderInCondition())
+}
+
+func TestMySQLSelectParser(t *testing.T) {
+	query := "select t0.a a, t1.* from tbl0 t0, tbl1 as t1, tbl2 where t0.a = t1.a and t0.b = tbl2.b for UPDATE;"
+	factory := sqlparser.GetSQLParserFactory(MySQL)
+	parser, err := factory.NewSQLParser(query)
+	if err != nil {
+		panic(err)
+	}
+	selectParser := parser.(model.SQLSelectParser)
+	fmt.Println(selectParser.GetSQL())
+	fmt.Println(selectParser.GetSQLType().String())
+	fmt.Println(selectParser.GetTableName())
+	fmt.Println(selectParser.GetTableList())
+	fmt.Println(selectParser.GetSelectColumns())
+	fmt.Println(selectParser.GetCondition())
+	fmt.Println(selectParser.IsSelectForUpdate())
 }

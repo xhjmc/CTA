@@ -1,10 +1,11 @@
-package client
+package client_test
 
 import (
 	"context"
 	"cta/common/addrgetter"
 	"cta/common/logs"
 	"cta/common/pool"
+	"cta/rpc/thrift/client"
 	"cta/rpc/thrift/config"
 	"cta/rpc/thrift/gen-go/tc"
 	"fmt"
@@ -40,8 +41,8 @@ func TestTClientWithPool(t *testing.T) {
 	// 0		4.5						5						9			9.5
 	// 0 send	0 timeout and 1 send	1 recv 0 and 2 send		2 recv 1	2 result
 
-	tClient := TClientWithPoolFactory(
-		StandardThriftClientPoolFactory(
+	tClient := client.TClientWithPoolFactory(
+		client.StandardThriftClientPoolFactory(
 			pool.ObjectPoolFactory2(poolConf),
 			thriftConf,
 			addrgetter.NewAddrListGetter(addrList),
