@@ -1,6 +1,6 @@
 package datasource
 
 const (
-	BusinessPK = "pk_id"
-	BatchSize  = 1000
+	BusinessTablePK = "pk_id"
+	BatchSize       = 1000
 )

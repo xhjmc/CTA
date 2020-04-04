@@ -2,7 +2,9 @@ package datasource
 
 import (
 	"context"
-	"cta/rm"
+	"cta/constant"
+	"cta/model/rmmodel"
+	"cta/variable"
 	"database/sql"
 	"errors"
 )
@@ -21,18 +23,20 @@ func (d *DataSource) GetResourceId() string {
 	return d.resourceId
 }
 
-func (d *DataSource) Begin(ctx context.Context) (*LocalTransaction, error) {
-	tx, err := d.db.Begin()
+func (d *DataSource) Begin(ctx context.Context, xid string) (*LocalTransaction, error) {
+	tx, err := d.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	xid, ok := ctx.Value(rm.XidKey).(string)
-	if !ok || len(xid) == 0 {
-		_ = tx.Rollback()
-		return nil, errors.New("the xid in context is empty")
+	if len(xid) == 0 {
+		xid, _ = ctx.Value(constant.XidKey).(string)
+		if len(xid) == 0 {
+			_ = tx.Rollback()
+			return nil, errors.New("the xid in context is empty")
+		}
 	}
 
-	branchId, err := GetDataSourceManager().BranchRegister(ctx, rm.AT, xid, d.resourceId)
+	branchId, err := GetDataSourceManager().BranchRegister(ctx, rmmodel.AT, xid, d.resourceId, variable.ApplicationName)
 	if err != nil {
 		_ = tx.Rollback()
 		return nil, err
@@ -44,7 +48,7 @@ func (d *DataSource) Begin(ctx context.Context) (*LocalTransaction, error) {
 		resourceId:    d.resourceId,
 		lockKeys:      "",
 		tx:            tx,
-		status:        rm.Registered,
+		status:        rmmodel.Registered,
 		sqlParserName: d.sqlParserName,
 	}
 	return ltx, nil

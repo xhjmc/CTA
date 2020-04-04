@@ -3,8 +3,10 @@ package datasource
 import (
 	"context"
 	"cta/common/logs"
+	"cta/common/publicwaitgroup"
 	"cta/common/sqlparser/model"
-	"cta/rm"
+	"cta/model/rmmodel"
+	"cta/tc"
 	"cta/util"
 	"database/sql"
 	"errors"
@@ -18,24 +20,19 @@ type DataSourceManager struct {
 	lock          sync.RWMutex
 }
 
-var (
-	dataSourceManager     *DataSourceManager
-	dataSourceManagerOnce sync.Once
-)
+var dataSourceManager = &DataSourceManager{
+	dataSourceMap: make(map[string]*DataSource),
+}
 
 func GetDataSourceManager() *DataSourceManager {
-	dataSourceManagerOnce.Do(func() {
-		// init dataSourceManager
-		dataSourceManager = &DataSourceManager{
-			dataSourceMap: make(map[string]*DataSource),
-		}
-	})
 	return dataSourceManager
 }
 
-func (m *DataSourceManager) BranchCommit(ctx context.Context, branchType rm.BranchType, xid string, branchId int64, resourceId string) (rm.BranchStatus, error) {
+func (m *DataSourceManager) BranchCommit(ctx context.Context, branchType rmmodel.BranchType, xid string, branchId int64, resourceId string) (rmmodel.BranchStatus, error) {
 	// 异步删除undo_log
+	publicwaitgroup.Add(1)
 	go func() {
+		defer publicwaitgroup.Done()
 		tx, err := m.MustGetDataSource(resourceId).getSQLDB().BeginTx(ctx, nil)
 		if err == nil {
 			log := &UndoLog{
@@ -53,13 +50,13 @@ func (m *DataSourceManager) BranchCommit(ctx context.Context, branchType rm.Bran
 			logs.Infof("delete undo_log asynchronously error: %s", err)
 		}
 	}()
-	return rm.PhaseTwo_CommittDone, nil
+	return rmmodel.PhaseTwo_CommitDone, nil
 }
 
-func (m *DataSourceManager) BranchRollback(ctx context.Context, branchType rm.BranchType, xid string, branchId int64, resourceId string) (rm.BranchStatus, error) {
+func (m *DataSourceManager) BranchRollback(ctx context.Context, branchType rmmodel.BranchType, xid string, branchId int64, resourceId string) (rmmodel.BranchStatus, error) {
 	tx, err := m.MustGetDataSource(resourceId).getSQLDB().BeginTx(ctx, nil)
 	if err != nil {
-		return rm.PhaseTwo_RollbackFailed_Retryable, err
+		return rmmodel.PhaseTwo_RollbackFailed_Retryable, err
 	}
 
 	undoLog := &UndoLog{
@@ -81,33 +78,43 @@ func (m *DataSourceManager) BranchRollback(ctx context.Context, branchType rm.Br
 		if err != nil {
 			_ = tx.Rollback()
 			logs.Infof("insert log_status=RollbackDoneStatus into undo_log error: %s", err)
+			return rmmodel.PhaseTwo_RollbackFailed_Retryable, err
 		} else {
 			_ = tx.Commit()
+			return rmmodel.PhaseTwo_RollbackDone, nil
 		}
-		return rm.PhaseTwo_RollbackDone, nil
 	}
 
 	// 建立保存点Before_Undo
-	_, _ = tx.Exec("SAVEPOINT Before_Undo")
+	if undoLog.LogStatus != RollbackFailedStatus {
+		_, _ = tx.Exec("SAVEPOINT Before_Undo")
+	}
 
 	err = m.rollbackUndoLog(ctx, tx, undoLog)
+	if err == nil {
+		// 根据id删除undo_log表中的对应行
+		err = undoLog.DeleteById(tx)
+	}
 	if err != nil {
-		// 回滚至保存点Before_Undo
-		_, _ = tx.Exec("ROLLBACK TO SAVEPOINT Before_Undo")
-
-		//将log_status更改为RollbackFailedStatus
-		undoLog.LogStatus = RollbackFailedStatus
-		err := undoLog.UpdateLogStatus(tx)
-		if err != nil {
-			logs.Infof("update log_status=RollbackFailedStatus error: %s", err)
-			_ = tx.Rollback()
+		if undoLog.LogStatus != RollbackFailedStatus {
+			// 回滚至保存点Before_Undo
+			_, _ = tx.Exec("ROLLBACK TO SAVEPOINT Before_Undo")
+			//将log_status更改为RollbackFailedStatus
+			undoLog.LogStatus = RollbackFailedStatus
+			err := undoLog.UpdateLogStatus(tx)
+			if err != nil {
+				logs.Infof("update log_status=RollbackFailedStatus error: %s", err)
+				_ = tx.Rollback()
+			} else {
+				_ = tx.Commit()
+			}
 		} else {
-			_ = tx.Commit()
+			_ = tx.Rollback()
 		}
-		return rm.PhaseTwo_RollbackFailed_Retryable, nil
+		return rmmodel.PhaseTwo_RollbackFailed_Retryable, err
 	}
 	_ = tx.Commit()
-	return rm.PhaseTwo_RollbackDone, nil
+	return rmmodel.PhaseTwo_RollbackDone, nil
 }
 
 func (m *DataSourceManager) rollbackUndoLog(ctx context.Context, tx *sql.Tx, undoLog *UndoLog) error {
@@ -139,7 +146,7 @@ func (m *DataSourceManager) rollbackUpdateUndoItem(ctx context.Context, tx *sql.
 // 根据前镜像回滚数据
 func (m *DataSourceManager) rollbackUpdateByBeforeImage(ctx context.Context, tx *sql.Tx, undoItem *UndoItem) error {
 	if len(undoItem.AfterImage.Rows) > 0 {
-		// 获取所有的列，前提保证所有的行中的列都一致
+		// 获取所有的列，前提保证所有行中的列都一致
 		firstRow := undoItem.BeforeImage.Rows[0]
 		colNameList := make([]string, 0)
 		set := ""
@@ -151,19 +158,19 @@ func (m *DataSourceManager) rollbackUpdateByBeforeImage(ctx context.Context, tx 
 
 		}
 		colLen := len(colNameList)
-		query := fmt.Sprintf("update %s set %s where %s = ?", undoItem.TableName, set, BusinessPK)
+		query := fmt.Sprintf("update %s set %s where %s = ?", undoItem.TableName, set, BusinessTablePK)
 		stmt, err := tx.PrepareContext(ctx, query)
 		if err != nil {
 			return err
 		}
 		defer stmt.Close()
 		// 填充执行参数
-		for _, imageRow := range undoItem.AfterImage.Rows {
+		for _, imageRow := range undoItem.BeforeImage.Rows {
 			args := make([]interface{}, 0, colLen+1)
 			for _, colName := range colNameList {
 				args = append(args, imageRow[colName].Value)
 			}
-			args = append(args, imageRow[BusinessPK].Value)
+			args = append(args, imageRow[BusinessTablePK].Value)
 			_, err := stmt.ExecContext(ctx, args...)
 			if err != nil {
 				return err
@@ -175,14 +182,14 @@ func (m *DataSourceManager) rollbackUpdateByBeforeImage(ctx context.Context, tx 
 
 // 查询后镜像是否与当前数据一致
 func (m *DataSourceManager) checkUpdateAfterImage(ctx context.Context, tx *sql.Tx, undoItem *UndoItem) error {
-	query := fmt.Sprintf("select * from %s where %s = ?", undoItem.TableName, BusinessPK)
+	query := fmt.Sprintf("select * from %s where %s = ?", undoItem.TableName, BusinessTablePK)
 	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, imageRow := range undoItem.AfterImage.Rows {
-		rows, err := stmt.QueryContext(ctx, imageRow[BusinessPK].Value)
+		rows, err := stmt.QueryContext(ctx, imageRow[BusinessTablePK].Value)
 		if err != nil {
 			return err
 		}
@@ -216,115 +223,121 @@ func (m *DataSourceManager) checkUpdateAfterImage(ctx context.Context, tx *sql.T
 
 func (m *DataSourceManager) rollbackDeleteUndoItem(ctx context.Context, tx *sql.Tx, undoItem *UndoItem) error {
 	rowsLen := len(undoItem.BeforeImage.Rows)
-	if rowsLen > 0 {
-		// 获取所有的列，前提保证所有的行中的列都一致
-		firstRow := undoItem.BeforeImage.Rows[0]
-		colNameList := make([]string, 0)
-		colNames := ""
-		placeholders := ""
-		prefix := "("
-		for colName := range firstRow {
-			colNameList = append(colNameList, colName)
-			colNames += prefix + colName
-			placeholders += prefix + "?"
-			prefix = ","
+	if rowsLen == 0 {
+		return nil
+	}
+
+	// 获取所有的列，前提保证所有的行中的列都一致
+	// 同时生成sql语句
+	firstRow := undoItem.BeforeImage.Rows[0]
+	colNameList := make([]string, 0)
+	colNames := ""
+	placeholders := ""
+	prefix := "("
+	for colName := range firstRow {
+		colNameList = append(colNameList, colName)
+		colNames += prefix + colName
+		placeholders += prefix + "?"
+		prefix = ","
+	}
+	colNames += ")"
+	placeholders += ")"
+	colLen := len(colNameList)
+	queryPrefix := fmt.Sprintf("insert into %s%s values", undoItem.TableName, colNames)
+
+	// 批量执行
+	maxBatchSize := BatchSize
+	if rowsLen < BatchSize {
+		maxBatchSize = rowsLen
+	}
+	batchArgs := make([]interface{}, 0, maxBatchSize*colLen)
+
+	rowsIndex := 0
+	batchExec := func(batchTimes, batchSize int) error {
+		if batchTimes == 0 || batchSize == 0 {
+			return nil
 		}
-		colNames += ")"
-		placeholders += ")"
-		colLen := len(colNameList)
 
-		queryPrefix := fmt.Sprintf("insert into %s%s values", undoItem.TableName, colNames)
+		batchQuery := queryPrefix + placeholders
+		for i := 1; i < batchSize; i++ {
+			batchQuery += "," + placeholders
+		}
 
-		rowsIndex := 0
-		// 以BatchSize为单位，批量执行
-		batchQueryTimes := rowsLen / BatchSize
-		if batchQueryTimes > 0 {
-			batchPlaceholders := placeholders
-			for i := 1; i < BatchSize; i++ {
-				batchPlaceholders += "," + placeholders
-			}
-			batchQuery := queryPrefix + batchPlaceholders
+		exec := func() error {
+			_, err := tx.ExecContext(ctx, batchQuery, batchArgs...)
+			return err
+		}
+		if batchTimes > 1 {
+			// 批次数大于1时，使用prepare预编译sql语句，优化执行速度
 			stmt, err := tx.PrepareContext(ctx, batchQuery)
 			if err != nil {
 				return err
 			}
-			defer stmt.Close()
-			batchArgsLen := BatchSize * colLen
-			batchArgs := make([]interface{}, 0, batchArgsLen)
-			// 批量执行batchQueryTimes次
-			for i := 0; i < batchQueryTimes; i++ {
-				// 填充批量执行参数
-				batchArgs = batchArgs[:0]
-				for j := 0; j < BatchSize; j++ {
-					for _, colName := range colNameList {
-						batchArgs = append(batchArgs, undoItem.BeforeImage.Rows[rowsIndex][colName].Value)
-						rowsIndex++
-					}
-				}
+			exec = func() error {
 				_, err := stmt.ExecContext(ctx, batchArgs...)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		// 批量执行剩余行
-		batchSize := rowsLen % BatchSize
-		if batchSize > 0 {
-			batchPlaceholders := placeholders
-			for i := 1; i < batchSize; i++ {
-				batchPlaceholders += "," + placeholders
-			}
-			batchQuery := queryPrefix + batchPlaceholders
-
-			batchArgsLen := batchSize * colLen
-			batchArgs := make([]interface{}, 0, batchArgsLen)
-			for j := 0; j < batchSize; j++ {
-				for _, colName := range colNameList {
-					batchArgs = append(batchArgs, undoItem.BeforeImage.Rows[rowsIndex][colName].Value)
-					rowsIndex++
-				}
-			}
-			_, err := tx.ExecContext(ctx, batchQuery, batchArgs...)
-			if err != nil {
 				return err
 			}
 		}
+
+		// 批量执行batchTimes次
+		for i := 0; i < batchTimes; i++ {
+			// 重置执行参数
+			batchArgs = batchArgs[:0]
+			// 填充批量执行参数
+			for j := 0; j < batchSize; j++ {
+				for _, colName := range colNameList {
+					batchArgs = append(batchArgs, undoItem.BeforeImage.Rows[rowsIndex][colName].Value)
+				}
+				rowsIndex++
+			}
+			// 执行一批
+			if err := exec(); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}
-	return nil
+
+	// 以BatchSize为单位，批量执行
+	if err := batchExec(rowsLen/BatchSize, BatchSize); err != nil {
+		return err
+	}
+	return batchExec(1, rowsLen%BatchSize)
 }
 
 func (m *DataSourceManager) rollbackInsertUndoItem(ctx context.Context, tx *sql.Tx, undoItem *UndoItem) error {
-	query := fmt.Sprintf("delete from %s where %s = ?", undoItem.TableName, BusinessPK)
+	query := fmt.Sprintf("delete from %s where %s = ?", undoItem.TableName, BusinessTablePK)
 	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
 		return err
 	}
 	for _, row := range undoItem.AfterImage.Rows {
-		val := row[BusinessPK].Value
+		val := row[BusinessTablePK].Value
 		_, err := stmt.ExecContext(ctx, val)
 		if err != nil {
-			logs.Infof("rollback insert %s=%v error: %s", BusinessPK, val, err)
+			logs.Infof("rollback insert %s=%v error: %s", BusinessTablePK, val, err)
 		}
 	}
 	return nil
 }
-func (m *DataSourceManager) BranchRegister(ctx context.Context, branchType rm.BranchType, xid string, resourceId string) (int64, error) {
-	// todo
-	return 10086, nil
+
+// 向TC注册分支事务，返回branchId
+func (m *DataSourceManager) BranchRegister(ctx context.Context, branchType rmmodel.BranchType, xid string, resourceId string, applicationName string) (int64, error) {
+	return tc.GetTransactionCoordinatorClient().BranchRegister(ctx, branchType, xid, resourceId, applicationName)
 }
 
-func (m *DataSourceManager) BranchReport(ctx context.Context, branchType rm.BranchType, xid string, branchId int64, status rm.BranchStatus) error {
-	// todo
-	return nil
-}git
-
-func (m *DataSourceManager) GlobalLock(ctx context.Context, branchType rm.BranchType, xid string, resourceId string, lockKeys string) error {
-	// todo
-	return nil
+// 向TC报告分支事务执行状态
+func (m *DataSourceManager) BranchReport(ctx context.Context, branchType rmmodel.BranchType, xid string, branchId int64, status rmmodel.BranchStatus) error {
+	return tc.GetTransactionCoordinatorClient().BranchReport(ctx, branchType, xid, branchId, status)
 }
 
-func (m *DataSourceManager) RegisterResource(resource rm.Resource) error {
+// 向TC申请全局资源锁
+func (m *DataSourceManager) GlobalLock(ctx context.Context, branchType rmmodel.BranchType, xid string, resourceId string, lockKeys string) error {
+	return tc.GetTransactionCoordinatorClient().GlobalLock(ctx, branchType, xid, resourceId, lockKeys)
+}
+
+func (m *DataSourceManager) RegisterResource(resource rmmodel.Resource) error {
 	dataSource, ok := resource.(*DataSource)
 	if !ok {
 		return errors.New("only DataSource can be registered in DataSourceManager")
@@ -336,7 +349,7 @@ func (m *DataSourceManager) RegisterResource(resource rm.Resource) error {
 	return nil
 }
 
-func (m *DataSourceManager) UnregisterResource(resource rm.Resource) error {
+func (m *DataSourceManager) UnregisterResource(resource rmmodel.Resource) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	resourceId := resource.GetResourceId()
@@ -348,16 +361,16 @@ func (m *DataSourceManager) UnregisterResource(resource rm.Resource) error {
 	return nil
 }
 
-func (m *DataSourceManager) GetResource(resourceId string) rm.Resource {
+func (m *DataSourceManager) GetResource(resourceId string) rmmodel.Resource {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	return m.dataSourceMap[resourceId]
 }
 
-func (m *DataSourceManager) GetResources() map[string]rm.Resource {
+func (m *DataSourceManager) GetResources() map[string]rmmodel.Resource {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
-	ret := make(map[string]rm.Resource)
+	ret := make(map[string]rmmodel.Resource)
 	for key, val := range m.dataSourceMap {
 		ret[key] = val
 	}
@@ -368,6 +381,6 @@ func (m *DataSourceManager) MustGetDataSource(resourceId string) *DataSource {
 	return m.GetResource(resourceId).(*DataSource)
 }
 
-func (m *DataSourceManager) GetBranchType() rm.BranchType {
-	return rm.AT
+func (m *DataSourceManager) GetBranchType() rmmodel.BranchType {
+	return rmmodel.AT
 }

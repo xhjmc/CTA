@@ -7,7 +7,7 @@ import (
 )
 
 type UndoLog struct {
-	Id              int64       `json:"id"`
+	PKId            int64       `json:"pk_id"`
 	Xid             string      `json:"xid"`
 	BranchId        int64       `json:"branch_id"`
 	UndoItems       []*UndoItem `json:"undo_items"`
@@ -55,11 +55,11 @@ func (log *UndoLog) Delete(tx *sql.Tx) error {
 }
 
 func (log *UndoLog) Select(tx *sql.Tx) error {
-	query := "select id, xid, branch_id, undo_items, log_status, create_timestamp from undo_log where xid = ? and branch_id = ?;"
+	query := "select pk_id, xid, branch_id, undo_items, log_status, create_timestamp from undo_log where xid = ? and branch_id = ?;"
 	row := tx.QueryRow(query, log.Xid, log.BranchId)
 
 	var undoItemsBytes []byte
-	err := row.Scan(&log.Id, &log.Xid, &log.BranchId, &undoItemsBytes, &log.LogStatus, &log.CreateTimestamp)
+	err := row.Scan(&log.PKId, &log.Xid, &log.BranchId, &undoItemsBytes, &log.LogStatus, &log.CreateTimestamp)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,13 @@ func (log *UndoLog) Select(tx *sql.Tx) error {
 }
 
 func (log *UndoLog) UpdateLogStatus(tx *sql.Tx) error {
-	query := "update undo_log set log_status = ? where id = ?;"
-	_, err := tx.Exec(query, log.LogStatus, log.Id)
+	query := "update undo_log set log_status = ? where pk_id = ?;"
+	_, err := tx.Exec(query, log.LogStatus, log.PKId)
+	return err
+}
+
+func (log *UndoLog) DeleteById(tx *sql.Tx) error {
+	query := "delete from undo_log where pk_id = ?;"
+	_, err := tx.Exec(query, log.PKId)
 	return err
 }

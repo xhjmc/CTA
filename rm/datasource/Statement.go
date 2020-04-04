@@ -17,7 +17,9 @@ type Stmt struct {
 	sqlParser           model.SQLParser
 }
 
+// 生成UndoImage后关闭rows
 func generateUndoImage(rows *sql.Rows) *Image {
+	defer rows.Close()
 	image := &Image{Rows: make([]ImageRow, 0)}
 	beforeImageCols, _ := rows.Columns()
 	tmpLen := len(beforeImageCols)
@@ -33,6 +35,12 @@ func generateUndoImage(rows *sql.Rows) *Image {
 		}
 		imageRow := ImageRow{}
 		for i, colName := range beforeImageCols {
+			// 避免使用[]byte类型
+			// 因为json.Marshal遇到[]byte类型时会做base64编码变成字符串类型，
+			// 使用json.Unmarshal复原，用interface{}类型承接时只能得到字符串类型
+			if val, ok := tmpRow[i].([]byte); ok {
+				tmpRow[i] = string(val)
+			}
 			imageRow[colName] = ImageField{
 				Name:  colName,
 				Value: tmpRow[i],
@@ -52,25 +60,29 @@ func getImageArgs(imageArgsFunc func(args []interface{}) []interface{}, args []i
 
 func (s *Stmt) execUpdateContext(ctx context.Context, args ...interface{}) (sql.Result, error) {
 	beforeImageArgs := getImageArgs(s.beforeImageArgsFunc, args)
-	beforeImage, err := s.beforeImageStmt.QueryContext(ctx, beforeImageArgs...)
+	beforeImageRes, err := s.beforeImageStmt.QueryContext(ctx, beforeImageArgs...)
 	if err != nil {
 		return nil, fmt.Errorf("query before image error: %s", err)
 	}
+	beforeImage := generateUndoImage(beforeImageRes)
+
 	res, err := s.stmt.ExecContext(ctx, args...)
 	if err != nil {
 		return nil, err
 	}
+
 	afterImageArgs := getImageArgs(s.afterImageArgsFunc, args)
-	afterImage, err := s.afterImageStmt.QueryContext(ctx, afterImageArgs...)
+	afterImageRes, err := s.afterImageStmt.QueryContext(ctx, afterImageArgs...)
 	if err != nil {
 		return nil, fmt.Errorf("query after image error: %s", err)
 	}
+	afterImage := generateUndoImage(afterImageRes)
 
 	undoItem := &UndoItem{
 		SQLType:     s.sqlParser.GetSQLType(),
 		TableName:   s.sqlParser.GetTableName(),
-		BeforeImage: generateUndoImage(beforeImage),
-		AfterImage:  generateUndoImage(afterImage),
+		BeforeImage: beforeImage,
+		AfterImage:  afterImage,
 	}
 	s.ltx.addUndoItem(undoItem)
 	s.addLockKey()
@@ -79,10 +91,12 @@ func (s *Stmt) execUpdateContext(ctx context.Context, args ...interface{}) (sql.
 
 func (s *Stmt) execDeleteContext(ctx context.Context, args ...interface{}) (sql.Result, error) {
 	beforeImageArgs := getImageArgs(s.beforeImageArgsFunc, args)
-	beforeImage, err := s.beforeImageStmt.QueryContext(ctx, beforeImageArgs...)
+	beforeImageRes, err := s.beforeImageStmt.QueryContext(ctx, beforeImageArgs...)
 	if err != nil {
 		return nil, fmt.Errorf("query before image error: %s", err)
 	}
+	beforeImage := generateUndoImage(beforeImageRes)
+
 	res, err := s.stmt.ExecContext(ctx, args...)
 	if err != nil {
 		return nil, err
@@ -91,7 +105,7 @@ func (s *Stmt) execDeleteContext(ctx context.Context, args ...interface{}) (sql.
 	undoItem := &UndoItem{
 		SQLType:     s.sqlParser.GetSQLType(),
 		TableName:   s.sqlParser.GetTableName(),
-		BeforeImage: generateUndoImage(beforeImage),
+		BeforeImage: beforeImage,
 		AfterImage:  nil,
 	}
 	s.ltx.addUndoItem(undoItem)
@@ -105,14 +119,15 @@ func (s *Stmt) execInsertContext(ctx context.Context, args ...interface{}) (sql.
 	if err != nil {
 		return nil, err
 	}
+	// todo bug: lastInsertId不一定是最大的id
 	lastId, _ := res.LastInsertId()
 	rowsAffected, _ := res.RowsAffected()
 
 	image := &Image{Rows: make([]ImageRow, 0)}
 	for i := lastId - rowsAffected + 1; i <= lastId; i++ {
 		image.Rows = append(image.Rows, ImageRow{
-			BusinessPK: ImageField{
-				Name:  BusinessPK,
+			BusinessTablePK: ImageField{
+				Name:  BusinessTablePK,
 				Value: i,
 			},
 		})

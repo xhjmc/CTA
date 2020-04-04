@@ -5,7 +5,7 @@ import (
 	"cta/common/logs"
 	"cta/common/sqlparser"
 	"cta/common/sqlparser/model"
-	"cta/rm"
+	"cta/model/rmmodel"
 	"database/sql"
 	"fmt"
 	"sync"
@@ -18,7 +18,7 @@ type LocalTransaction struct {
 	resourceId    string
 	lockKeys      string
 	tx            *sql.Tx
-	status        rm.BranchStatus
+	status        rmmodel.BranchStatus
 	sqlParserName string
 
 	undoItems       []*UndoItem
@@ -27,7 +27,7 @@ type LocalTransaction struct {
 
 // When some errors occur during committing, the LocalTransaction will be rollback and this function will return error.
 func (ltx *LocalTransaction) Commit() (err error) {
-	ltx.status = rm.PhaseOne_Failed
+	ltx.status = rmmodel.PhaseOne_Failed
 	defer func() {
 		ltx.reportBranch()
 		if err != nil {
@@ -57,12 +57,12 @@ func (ltx *LocalTransaction) Commit() (err error) {
 		return
 	}
 
-	ltx.status = rm.PhaseOne_Done
+	ltx.status = rmmodel.PhaseOne_Done
 	return
 }
 
 func (ltx *LocalTransaction) RollBack() error {
-	ltx.status = rm.PhaseOne_Failed
+	ltx.status = rmmodel.PhaseOne_Failed
 	defer ltx.reportBranch()
 
 	err := ltx.tx.Rollback()
@@ -112,8 +112,8 @@ func (ltx *LocalTransaction) PrepareContext(ctx context.Context, query string) (
 		}
 		stmt.beforeImageStmt = imageStmt
 		stmt.beforeImageArgsFunc = imageArgsFunc
-		stmt.afterImageStmt = imageStmt
-		stmt.afterImageArgsFunc = imageArgsFunc
+		stmt.afterImageStmt = nil
+		stmt.afterImageArgsFunc = nil
 	case model.UPDATE:
 		parser := sqlParser.(model.SQLUpdateParser)
 		imageQuery := fmt.Sprintf("select * from %s where %s", parser.GetTableName(), parser.GetCondition())
@@ -185,7 +185,7 @@ func (ltx *LocalTransaction) QueryRow(query string, args ...interface{}) *sql.Ro
 }
 
 func (ltx *LocalTransaction) reportBranch() bool {
-	err := GetDataSourceManager().BranchReport(context.Background(), rm.AT, ltx.xid, ltx.branchId, ltx.status)
+	err := GetDataSourceManager().BranchReport(context.Background(), rmmodel.AT, ltx.xid, ltx.branchId, ltx.status)
 	if err != nil {
 		logs.Infof("xid: %s, branchId: %d, report branch error: %s", ltx.xid, ltx.branchId, err)
 		return false
@@ -218,5 +218,5 @@ func (ltx *LocalTransaction) addLockKey(lockKey string) {
 }
 
 func (ltx *LocalTransaction) globalLock() error {
-	return GetDataSourceManager().GlobalLock(context.Background(), rm.AT, ltx.xid, ltx.resourceId, ltx.lockKeys)
+	return GetDataSourceManager().GlobalLock(context.Background(), rmmodel.AT, ltx.xid, ltx.resourceId, ltx.lockKeys)
 }

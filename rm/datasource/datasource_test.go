@@ -2,8 +2,13 @@ package datasource
 
 import (
 	"context"
+	"cta/common/publicwaitgroup"
 	"cta/common/sqlparser/model"
-	"cta/rm"
+	"cta/conf"
+	"cta/constant"
+	"cta/model/rmmodel"
+	"cta/tc"
+	"cta/variable"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -14,11 +19,26 @@ import (
 const (
 	MySQL               = "mysql"
 	Test_XID            = "127.0.0.1:5460:1"
-	Test_BranchId       = 10086
 	Test_DataSourceName = "jmc:chenjinming@tcp(127.0.0.1:3306)/cta?charset=utf8"
 )
 
+const (
+	Test_Unknown_BranchId int64 = iota
+	Test_Insert_BranchId
+	Test_Delete_BranchId
+	Test_Update_BranchId
+	Test_Select_BranchId
+	Test_BranchId = 10086
+)
+
 func init() {
+	conf.SetOnce(map[string]interface{}{
+		constant.TCServiceNameKey: "127.0.0.1:5460",
+	})
+	variable.LoadFromConf()
+
+	tc.SetTransactionCoordinatorClient(&tc.MockTCClient{})
+
 	db, _ := sql.Open(MySQL, Test_DataSourceName)
 	dataSource := NewDataSource(Test_DataSourceName, MySQL, db)
 	err := GetDataSourceManager().RegisterResource(dataSource)
@@ -61,8 +81,8 @@ func TestInsertUndoLog(t *testing.T) {
 	dataSource := GetDataSourceManager().MustGetDataSource(Test_DataSourceName)
 	xid := Test_XID
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, rm.XidKey, xid)
-	ltx, err := dataSource.Begin(ctx)
+	//ctx = context.WithValue(ctx, constant.XidKey, xid)
+	ltx, err := dataSource.Begin(ctx, xid)
 	if err != nil {
 		panic(err)
 	}
@@ -128,7 +148,7 @@ func TestQueryUndoLog(t *testing.T) {
 	row := tx.QueryRowContext(ctx, query, xid, branchId)
 	undoLog := &UndoLog{}
 	var undoItemsBytes []byte
-	err := row.Scan(&undoLog.Id, &undoLog.Xid, &undoLog.BranchId, &undoItemsBytes, &undoLog.LogStatus, &undoLog.CreateTimestamp)
+	err := row.Scan(&undoLog.PKId, &undoLog.Xid, &undoLog.BranchId, &undoItemsBytes, &undoLog.LogStatus, &undoLog.CreateTimestamp)
 	if err != nil {
 		panic(err)
 	}
@@ -148,23 +168,97 @@ func TestDeleteUndoLog(t *testing.T) {
 	}
 }
 
+func TestInsert(t *testing.T) {
+	dataSource := GetDataSourceManager().MustGetDataSource(Test_DataSourceName)
+	xid := Test_XID
+	ctx := context.Background()
+	//ctx = context.WithValue(ctx, constant.XidKey, xid)
+	ltx, err := dataSource.Begin(ctx, xid)
+	if err != nil {
+		panic(err)
+	}
+	ltx.branchId = Test_Insert_BranchId
+
+	query := "insert into test(id, col) values(?, ?);"
+	res, err := ltx.ExecContext(ctx, query, 111, "abc")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(res.RowsAffected())
+	fmt.Println(res.LastInsertId())
+
+	err = ltx.Commit()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestDelete(t *testing.T) {
+	dataSource := GetDataSourceManager().MustGetDataSource(Test_DataSourceName)
+	xid := Test_XID
+	ctx := context.Background()
+	//ctx = context.WithValue(ctx, constant.XidKey, xid)
+	ltx, err := dataSource.Begin(ctx, xid)
+	if err != nil {
+		panic(err)
+	}
+	ltx.branchId = Test_Delete_BranchId
+
+	query := "delete from test where id = ? and col = ?;"
+	res, err := ltx.ExecContext(ctx, query, 111, "abc")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(res.RowsAffected())
+	fmt.Println(res.LastInsertId())
+
+	err = ltx.Commit()
+	if err != nil {
+		panic(err)
+	}
+}
+
 func TestUpdate(t *testing.T) {
 	dataSource := GetDataSourceManager().MustGetDataSource(Test_DataSourceName)
 	xid := Test_XID
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, rm.XidKey, xid)
-	ltx, err := dataSource.Begin(ctx)
+	//ctx = context.WithValue(ctx, constant.XidKey, xid)
+	ltx, err := dataSource.Begin(ctx, xid)
 	if err != nil {
 		panic(err)
 	}
-	ltx.branchId = Test_BranchId
+	ltx.branchId = Test_Update_BranchId + 10
 
-	query := "update test set id = id + ? where col = ?"
+	query := "update test set id = id + ? where col = ?;"
 	res, err := ltx.ExecContext(ctx, query, 1, "abc")
-	fmt.Println(res, err)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(res)
 
 	err = ltx.Commit()
-	fmt.Println(err)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestCommit(t *testing.T) {
+	ctx := context.Background()
+	xid := Test_XID
+	branchId := Test_Delete_BranchId
+	resourceId := Test_DataSourceName
+	status, err := GetDataSourceManager().BranchCommit(ctx, rmmodel.AT, xid, branchId, resourceId)
+	fmt.Println(status.String(), err)
+	publicwaitgroup.Wait()
+}
+
+func TestRollback(t *testing.T) {
+	ctx := context.Background()
+	xid := Test_XID
+	branchId := Test_Delete_BranchId
+	resourceId := Test_DataSourceName
+	status, err := GetDataSourceManager().BranchRollback(ctx, rmmodel.AT, xid, branchId, resourceId)
+	fmt.Println(status.String(), err)
 }
 
 func TestSavePoint(t *testing.T) {
