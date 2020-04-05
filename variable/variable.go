@@ -1,7 +1,7 @@
 package variable
 
 import (
-	"github.com/XH-JMC/cta/conf"
+	"github.com/XH-JMC/cta/config"
 	"github.com/XH-JMC/cta/constant"
 )
 
@@ -11,6 +11,6 @@ var (
 )
 
 func LoadFromConf() {
-	ApplicationName = conf.GetString(constant.ApplicationNameKey)
-	TCServiceName = conf.GetStringOrDefault(constant.TCServiceNameKey, constant.DefaultTCServiceName)
+	ApplicationName = config.GetString(constant.ApplicationNameKey)
+	TCServiceName = config.GetStringOrDefault(constant.TCServiceNameKey, constant.DefaultTCServiceName)
 }

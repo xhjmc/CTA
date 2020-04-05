@@ -32,7 +32,7 @@ const (
 )
 
 func init() {
-	conf.SetOnce(map[string]interface{}{
+	config.SetConf(map[string]interface{}{
 		constant.TCServiceNameKey: "127.0.0.1:5460",
 	})
 	variable.LoadFromConf()
