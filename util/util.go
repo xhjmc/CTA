@@ -1,11 +1,21 @@
 package util
 
 import (
+	"cta/common/logs"
 	"errors"
 	"reflect"
 	"strconv"
 	"time"
 )
+
+func Protect(f func()) {
+	defer func() {
+		if err := recover(); err != nil {
+			logs.Warnf("recover panic: %s", err)
+		}
+	}()
+	f()
+}
 
 // try once first, and if it fails, retry ${retryTimes} times
 func Retry(retryTimes int, retryInterval time.Duration, f func() bool) bool {

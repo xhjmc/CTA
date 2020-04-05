@@ -22,10 +22,12 @@ var _ = bytes.Equal
 //  - BranchType
 //  - Xid
 //  - ResourceId
+//  - ApplicationName
 type BranchRegisterRequest struct {
   BranchType int32 `thrift:"BranchType,1" json:"branch_type"`
   Xid string `thrift:"Xid,2" json:"xid"`
   ResourceId string `thrift:"ResourceId,3" json:"reosurce_id"`
+  ApplicationName string `thrift:"ApplicationName,4" json:"application_name"`
 }
 
 func NewBranchRegisterRequest() *BranchRegisterRequest {
@@ -43,6 +45,10 @@ func (p *BranchRegisterRequest) GetXid() string {
 
 func (p *BranchRegisterRequest) GetResourceId() string {
   return p.ResourceId
+}
+
+func (p *BranchRegisterRequest) GetApplicationName() string {
+  return p.ApplicationName
 }
 func (p *BranchRegisterRequest) Read(iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(); err != nil {
@@ -80,6 +86,16 @@ func (p *BranchRegisterRequest) Read(iprot thrift.TProtocol) error {
     case 3:
       if fieldTypeId == thrift.STRING {
         if err := p.ReadField3(iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(fieldTypeId); err != nil {
+          return err
+        }
+      }
+    case 4:
+      if fieldTypeId == thrift.STRING {
+        if err := p.ReadField4(iprot); err != nil {
           return err
         }
       } else {
@@ -129,6 +145,15 @@ func (p *BranchRegisterRequest)  ReadField3(iprot thrift.TProtocol) error {
   return nil
 }
 
+func (p *BranchRegisterRequest)  ReadField4(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 4: ", err)
+} else {
+  p.ApplicationName = v
+}
+  return nil
+}
+
 func (p *BranchRegisterRequest) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("BranchRegisterRequest"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -136,6 +161,7 @@ func (p *BranchRegisterRequest) Write(oprot thrift.TProtocol) error {
     if err := p.writeField1(oprot); err != nil { return err }
     if err := p.writeField2(oprot); err != nil { return err }
     if err := p.writeField3(oprot); err != nil { return err }
+    if err := p.writeField4(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -171,6 +197,16 @@ func (p *BranchRegisterRequest) writeField3(oprot thrift.TProtocol) (err error) 
   return thrift.PrependError(fmt.Sprintf("%T.ResourceId (3) field write error: ", p), err) }
   if err := oprot.WriteFieldEnd(); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write field end error 3:ResourceId: ", p), err) }
+  return err
+}
+
+func (p *BranchRegisterRequest) writeField4(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("ApplicationName", thrift.STRING, 4); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:ApplicationName: ", p), err) }
+  if err := oprot.WriteString(string(p.ApplicationName)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.ApplicationName (4) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 4:ApplicationName: ", p), err) }
   return err
 }
 

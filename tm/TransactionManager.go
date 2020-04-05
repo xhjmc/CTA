@@ -3,7 +3,7 @@ package tm
 import (
 	"context"
 	"cta/model/tmmodel"
-	"cta/tc"
+	"cta/tc/tcclient"
 	"sync"
 )
 
@@ -23,17 +23,17 @@ func GetTransactionManager() *TransactionManager {
 }
 
 func (tm *TransactionManager) TransactionBegin(ctx context.Context) (string, error) {
-	return tc.GetTransactionCoordinatorClient().TransactionBegin(ctx)
+	return tcclient.GetTransactionCoordinatorClient().TransactionBegin(ctx)
 }
 
 func (tm *TransactionManager) TransactionCommit(ctx context.Context, xid string) (tmmodel.TransactionStatus, error) {
-	return tc.GetTransactionCoordinatorClient().TransactionCommit(ctx, xid)
+	return tcclient.GetTransactionCoordinatorClient().TransactionCommit(ctx, xid)
 }
 
 func (tm *TransactionManager) TransactionRollback(ctx context.Context, xid string) (tmmodel.TransactionStatus, error) {
-	return tc.GetTransactionCoordinatorClient().TransactionRollback(ctx, xid)
+	return tcclient.GetTransactionCoordinatorClient().TransactionRollback(ctx, xid)
 }
 
 func (tm *TransactionManager) GetTransactionStatus(ctx context.Context, xid string) (tmmodel.TransactionStatus, error) {
-	return tc.GetTransactionCoordinatorClient().GetTransactionStatus(ctx, xid)
+	return tcclient.GetTransactionCoordinatorClient().GetTransactionStatus(ctx, xid)
 }

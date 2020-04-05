@@ -1,4 +1,4 @@
-package tc
+package tcclient
 
 import (
 	"context"

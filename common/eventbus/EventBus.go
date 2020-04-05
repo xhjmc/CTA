@@ -5,14 +5,9 @@ import (
 	"sync"
 )
 
-type Event struct {
-	Name  string
-	Param string
-	Res   string
-	Err   error
-}
+type Event = interface{}
 
-type EventHandler func(context.Context, *Event)
+type EventHandler func(context.Context, Event)
 
 type EventBus struct {
 	eventHandlerLists map[string][]EventHandler
@@ -25,8 +20,8 @@ func Subscribe(eventName string, eventHandlers ...EventHandler) {
 	eventBus.Subscribe(eventName, eventHandlers...)
 }
 
-func Publish(ctx context.Context, event *Event) {
-	eventBus.Publish(ctx, event)
+func Publish(ctx context.Context, eventName string, event Event) {
+	eventBus.Publish(ctx, eventName, event)
 }
 
 func (b *EventBus) Subscribe(eventName string, eventHandlers ...EventHandler) {
@@ -42,11 +37,11 @@ func (b *EventBus) Subscribe(eventName string, eventHandlers ...EventHandler) {
 	b.eventHandlerLists[eventName] = append(eventHandlerList, eventHandlers...)
 }
 
-func (b *EventBus) Publish(ctx context.Context, event *Event) {
+func (b *EventBus) Publish(ctx context.Context, eventName string, event Event) {
 	var handlerList []EventHandler
 	b.lock.RLock()
 	if b.eventHandlerLists != nil {
-		handlerList = b.eventHandlerLists[event.Name]
+		handlerList = b.eventHandlerLists[eventName]
 	}
 	b.lock.RUnlock()
 	for _, handler := range handlerList {

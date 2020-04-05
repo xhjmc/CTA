@@ -4,6 +4,7 @@ struct BranchRegisterRequest {
     1: i32 BranchType (go.tag = "json:\"branch_type\"")
     2: string Xid (go.tag = "json:\"xid\"")
     3: string ResourceId (go.tag = "json:\"reosurce_id\"")
+    4: string ApplicationName (go.tag = "json:\"application_name\"")
 }
 
 struct BranchRegisterResponse {

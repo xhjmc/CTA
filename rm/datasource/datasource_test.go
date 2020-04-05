@@ -7,7 +7,7 @@ import (
 	"cta/conf"
 	"cta/constant"
 	"cta/model/rmmodel"
-	"cta/tc"
+	"cta/tc/tcclient"
 	"cta/variable"
 	"database/sql"
 	"encoding/json"
@@ -37,7 +37,7 @@ func init() {
 	})
 	variable.LoadFromConf()
 
-	tc.SetTransactionCoordinatorClient(&tc.MockTCClient{})
+	tcclient.SetTransactionCoordinatorClient(&tcclient.MockTCClient{})
 
 	db, _ := sql.Open(MySQL, Test_DataSourceName)
 	dataSource := NewDataSource(Test_DataSourceName, MySQL, db)

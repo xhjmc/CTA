@@ -1,45 +1,15 @@
-package tc
+package tcclient
 
 import (
 	"context"
-	"cta/common/rpc/thrift/client"
 	"cta/common/rpc/thrift/gen-go/tcservice"
 	"cta/model/rmmodel"
 	"cta/model/tmmodel"
-	"cta/variable"
 	"errors"
-	"sync"
 )
-
-type TransactionCoordinatorClient interface {
-	rmmodel.ResourceManagerOutbound
-	tmmodel.TransactionManagerOutbound
-}
 
 type StandardTCClient struct {
 	client *tcservice.TransactionCoordinatorServiceClient
-}
-
-var (
-	tcClientOnce sync.Once
-	tcClient     TransactionCoordinatorClient
-)
-
-func SetTransactionCoordinatorClient(client TransactionCoordinatorClient) {
-	tcClientOnce.Do(func() {
-		tcClient = client
-	})
-}
-
-func GetTransactionCoordinatorClient() TransactionCoordinatorClient {
-	tcClientOnce.Do(func() {
-		tClient := client.TClientWithPoolFactory3(variable.TCServiceName)
-		tcClient = &StandardTCClient{
-			client: tcservice.NewTransactionCoordinatorServiceClient(tClient),
-		}
-
-	})
-	return tcClient
 }
 
 func (c *StandardTCClient) BranchRegister(ctx context.Context, branchType rmmodel.BranchType, xid string, resourceId string, applicationName string) (int64, error) {
@@ -47,6 +17,7 @@ func (c *StandardTCClient) BranchRegister(ctx context.Context, branchType rmmode
 	req.BranchType = int32(branchType)
 	req.Xid = xid
 	req.ResourceId = resourceId
+	req.ApplicationName = applicationName
 	resp, err := c.client.BranchRegister(ctx, req)
 	if err != nil {
 		return 0, err

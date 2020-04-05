@@ -37,32 +37,30 @@ func (s *ThriftServer) SetProcessor(processor thrift.TProcessor) {
 
 func (s *ThriftServer) SetConf(conf map[string]interface{}) {
 	s.conf = conf
+}
 
+func (s *ThriftServer) Init() {
 	if s.thriftConfig == nil {
 		s.thriftConfig = config.GetDefaultThriftConfig()
 	}
 
-	if len(conf) != 0 {
-		s.addr, _ = conf["addr"].(string)
+	if len(s.conf) != 0 {
+		s.addr, _ = s.conf["addr"].(string)
 
-		if item, ok := conf["buffer_size"]; ok {
+		if item, ok := s.conf["buffer_size"]; ok {
 			if bufferSize, err := util.Interface2Int(item); err != nil {
 				s.thriftConfig.BufferSize = bufferSize
 			}
 		}
-		if item, ok := conf["framed"]; ok {
+		if item, ok := s.conf["framed"]; ok {
 			if framed, err := util.Interface2Bool(item); err != nil {
 				s.thriftConfig.Framed = framed
 			}
 		}
-		if protocol, ok := conf["protocol"].(string); ok {
+		if protocol, ok := s.conf["protocol"].(string); ok {
 			s.thriftConfig.Protocol = protocol
 		}
 	}
-}
-
-func (s *ThriftServer) Init() {
-
 }
 
 func (s *ThriftServer) Run() error {

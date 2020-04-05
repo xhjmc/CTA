@@ -2,11 +2,13 @@ package datasource
 
 import (
 	"context"
+	"cta/common/eventbus"
 	"cta/common/logs"
 	"cta/common/publicwaitgroup"
 	"cta/common/sqlparser/model"
+	"cta/model/eventmodel"
 	"cta/model/rmmodel"
-	"cta/tc"
+	"cta/tc/tcclient"
 	"cta/util"
 	"database/sql"
 	"errors"
@@ -20,12 +22,33 @@ type DataSourceManager struct {
 	lock          sync.RWMutex
 }
 
-var dataSourceManager = &DataSourceManager{
-	dataSourceMap: make(map[string]*DataSource),
-}
+var (
+	dataSourceManager *DataSourceManager
+	once              sync.Once
+)
 
 func GetDataSourceManager() *DataSourceManager {
+	once.Do(func() {
+		dataSourceManager = &DataSourceManager{
+			dataSourceMap: make(map[string]*DataSource),
+		}
+		dataSourceManager.init()
+	})
 	return dataSourceManager
+}
+
+func (m *DataSourceManager) init() {
+	// 订阅事件
+	eventbus.Subscribe(eventmodel.BranchCommit_EventName, func(ctx context.Context, event eventbus.Event) {
+		if e, ok := event.(*eventmodel.RMInboundEvent); ok && e.BranchType == rmmodel.AT {
+			e.BranchStatus, e.Error = m.BranchCommit(ctx, e.BranchType, e.Xid, e.BranchId, e.ResourceId)
+		}
+	})
+	eventbus.Subscribe(eventmodel.BranchRollback_EventName, func(ctx context.Context, event eventbus.Event) {
+		if e, ok := event.(*eventmodel.RMInboundEvent); ok && e.BranchType == rmmodel.AT {
+			e.BranchStatus, e.Error = m.BranchRollback(ctx, e.BranchType, e.Xid, e.BranchId, e.ResourceId)
+		}
+	})
 }
 
 func (m *DataSourceManager) BranchCommit(ctx context.Context, branchType rmmodel.BranchType, xid string, branchId int64, resourceId string) (rmmodel.BranchStatus, error) {
@@ -324,17 +347,17 @@ func (m *DataSourceManager) rollbackInsertUndoItem(ctx context.Context, tx *sql.
 
 // 向TC注册分支事务，返回branchId
 func (m *DataSourceManager) BranchRegister(ctx context.Context, branchType rmmodel.BranchType, xid string, resourceId string, applicationName string) (int64, error) {
-	return tc.GetTransactionCoordinatorClient().BranchRegister(ctx, branchType, xid, resourceId, applicationName)
+	return tcclient.GetTransactionCoordinatorClient().BranchRegister(ctx, branchType, xid, resourceId, applicationName)
 }
 
 // 向TC报告分支事务执行状态
 func (m *DataSourceManager) BranchReport(ctx context.Context, branchType rmmodel.BranchType, xid string, branchId int64, status rmmodel.BranchStatus) error {
-	return tc.GetTransactionCoordinatorClient().BranchReport(ctx, branchType, xid, branchId, status)
+	return tcclient.GetTransactionCoordinatorClient().BranchReport(ctx, branchType, xid, branchId, status)
 }
 
 // 向TC申请全局资源锁
 func (m *DataSourceManager) GlobalLock(ctx context.Context, branchType rmmodel.BranchType, xid string, resourceId string, lockKeys string) error {
-	return tc.GetTransactionCoordinatorClient().GlobalLock(ctx, branchType, xid, resourceId, lockKeys)
+	return tcclient.GetTransactionCoordinatorClient().GlobalLock(ctx, branchType, xid, resourceId, lockKeys)
 }
 
 func (m *DataSourceManager) RegisterResource(resource rmmodel.Resource) error {
