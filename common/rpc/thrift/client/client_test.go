@@ -2,9 +2,9 @@ package client_test
 
 import (
 	"context"
-	"cta/common/logs"
-	"cta/common/rpc/thrift/client"
-	"cta/common/rpc/thrift/gen-go/rmservice"
+	"github.com/XH-JMC/cta/common/logs"
+	"github.com/XH-JMC/cta/common/rpc/thrift/client"
+	"github.com/XH-JMC/cta/common/rpc/thrift/gen-go/rmservice"
 	objPool "github.com/jolestar/go-commons-pool/v2"
 	_ "net/http/pprof"
 	"sync"

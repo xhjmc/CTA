@@ -2,16 +2,16 @@ package datasource
 
 import (
 	"context"
-	"cta/common/publicwaitgroup"
-	"cta/common/sqlparser/model"
-	"cta/conf"
-	"cta/constant"
-	"cta/model/rmmodel"
-	"cta/tc/tcclient"
-	"cta/variable"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/XH-JMC/cta/common/publicwaitgroup"
+	"github.com/XH-JMC/cta/common/sqlparser/model"
+	"github.com/XH-JMC/cta/conf"
+	"github.com/XH-JMC/cta/constant"
+	"github.com/XH-JMC/cta/model/rmmodel"
+	"github.com/XH-JMC/cta/tc/tcclient"
+	"github.com/XH-JMC/cta/variable"
 	_ "github.com/go-sql-driver/mysql"
 	"testing"
 )

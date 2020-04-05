@@ -1,12 +1,12 @@
 package mysqlparser
 
 import (
-	"cta/common/sqlparser/model"
 	"errors"
+	"github.com/XH-JMC/cta/common/sqlparser/model"
 	"github.com/xwb1989/sqlparser"
 )
 
-type MySQLParserFactory struct {}
+type MySQLParserFactory struct{}
 
 var mySQLParserFactory *MySQLParserFactory
 

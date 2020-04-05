@@ -2,10 +2,10 @@ package handler
 
 import (
 	"context"
-	"cta/common/eventbus"
-	"cta/common/rpc/thrift/gen-go/tcservice"
-	"cta/model/eventmodel"
-	"cta/model/rmmodel"
+	"github.com/XH-JMC/cta/common/eventbus"
+	"github.com/XH-JMC/cta/common/rpc/thrift/gen-go/tcservice"
+	"github.com/XH-JMC/cta/model/eventmodel"
+	"github.com/XH-JMC/cta/model/rmmodel"
 )
 
 type TransactionCoordinatorServiceHandler struct{}

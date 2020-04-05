@@ -2,10 +2,10 @@ package tcclient
 
 import (
 	"context"
-	"cta/common/rpc/thrift/gen-go/tcservice"
-	"cta/model/rmmodel"
-	"cta/model/tmmodel"
 	"errors"
+	"github.com/XH-JMC/cta/common/rpc/thrift/gen-go/tcservice"
+	"github.com/XH-JMC/cta/model/rmmodel"
+	"github.com/XH-JMC/cta/model/tmmodel"
 )
 
 type StandardTCClient struct {

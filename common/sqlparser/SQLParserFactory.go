@@ -1,9 +1,9 @@
 package sqlparser
 
 import (
-	"cta/common/sqlparser/model"
-	"cta/common/sqlparser/mysqlparser"
 	"fmt"
+	"github.com/XH-JMC/cta/common/sqlparser/model"
+	"github.com/XH-JMC/cta/common/sqlparser/mysqlparser"
 	"sync"
 )
 

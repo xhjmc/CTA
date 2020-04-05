@@ -4,4 +4,3 @@
 package rmservice
 
 var GoUnusedProtection__ int;
-

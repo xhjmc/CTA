@@ -2,12 +2,12 @@ package datasource
 
 import (
 	"context"
-	"cta/common/logs"
-	"cta/common/sqlparser"
-	"cta/common/sqlparser/model"
-	"cta/model/rmmodel"
 	"database/sql"
 	"fmt"
+	"github.com/XH-JMC/cta/common/logs"
+	"github.com/XH-JMC/cta/common/sqlparser"
+	"github.com/XH-JMC/cta/common/sqlparser/model"
+	"github.com/XH-JMC/cta/model/rmmodel"
 	"sync"
 	"time"
 )

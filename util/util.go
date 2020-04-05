@@ -1,8 +1,8 @@
 package util
 
 import (
-	"cta/common/logs"
 	"errors"
+	"github.com/XH-JMC/cta/common/logs"
 	"reflect"
 	"strconv"
 	"time"

@@ -1,9 +1,9 @@
 package datasource
 
 import (
-	"cta/common/sqlparser/model"
 	"database/sql"
 	"encoding/json"
+	"github.com/XH-JMC/cta/common/sqlparser/model"
 )
 
 type UndoLog struct {

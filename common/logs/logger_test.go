@@ -1,7 +1,7 @@
 package logs_test
 
 import (
-	"cta/common/logs"
+	"github.com/XH-JMC/cta/common/logs"
 	"testing"
 )
 

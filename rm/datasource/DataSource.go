@@ -2,11 +2,11 @@ package datasource
 
 import (
 	"context"
-	"cta/constant"
-	"cta/model/rmmodel"
-	"cta/variable"
 	"database/sql"
 	"errors"
+	"github.com/XH-JMC/cta/constant"
+	"github.com/XH-JMC/cta/model/rmmodel"
+	"github.com/XH-JMC/cta/variable"
 )
 
 type DataSource struct {

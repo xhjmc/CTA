@@ -1,4 +1,4 @@
-module cta
+module github.com/XH-JMC/cta
 
 go 1.13
 

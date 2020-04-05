@@ -2,9 +2,9 @@ package client
 
 import (
 	"context"
-	"cta/common/pool"
-	"cta/common/rpc/thrift/config"
 	"fmt"
+	"github.com/XH-JMC/cta/common/pool"
+	"github.com/XH-JMC/cta/common/rpc/thrift/config"
 	"github.com/apache/thrift/lib/go/thrift"
 	"time"
 )

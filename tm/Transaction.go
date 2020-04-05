@@ -2,8 +2,8 @@ package tm
 
 import (
 	"context"
-	"cta/constant"
-	"cta/model/tmmodel"
+	"github.com/XH-JMC/cta/constant"
+	"github.com/XH-JMC/cta/model/tmmodel"
 )
 
 type Transaction struct {

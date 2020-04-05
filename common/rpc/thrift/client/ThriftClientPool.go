@@ -2,12 +2,12 @@ package client
 
 import (
 	"context"
-	"cta/common/discovery"
-	"cta/common/logs"
-	"cta/common/pool"
-	"cta/common/rpc/thrift/config"
 	"errors"
 	"fmt"
+	"github.com/XH-JMC/cta/common/discovery"
+	"github.com/XH-JMC/cta/common/logs"
+	"github.com/XH-JMC/cta/common/pool"
+	"github.com/XH-JMC/cta/common/rpc/thrift/config"
 )
 
 type ThriftClientPool interface {

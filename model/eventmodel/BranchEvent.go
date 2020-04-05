@@ -1,8 +1,8 @@
 package eventmodel
 
 import (
-	"cta/model/rmmodel"
-	"cta/model/tmmodel"
+	"github.com/XH-JMC/cta/model/rmmodel"
+	"github.com/XH-JMC/cta/model/tmmodel"
 )
 
 const (

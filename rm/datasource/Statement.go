@@ -2,9 +2,9 @@ package datasource
 
 import (
 	"context"
-	"cta/common/sqlparser/model"
 	"database/sql"
 	"fmt"
+	"github.com/XH-JMC/cta/common/sqlparser/model"
 )
 
 type Stmt struct {

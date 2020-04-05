@@ -2,8 +2,8 @@ package tm
 
 import (
 	"context"
-	"cta/model/tmmodel"
-	"cta/tc/tcclient"
+	"github.com/XH-JMC/cta/model/tmmodel"
+	"github.com/XH-JMC/cta/tc/tcclient"
 	"sync"
 )
 

@@ -2,10 +2,10 @@ package server
 
 import (
 	"context"
-	"cta/common/eventbus"
-	"cta/model/eventmodel"
-	"cta/model/rmmodel"
-	"cta/model/tmmodel"
+	"github.com/XH-JMC/cta/common/eventbus"
+	"github.com/XH-JMC/cta/model/eventmodel"
+	"github.com/XH-JMC/cta/model/rmmodel"
+	"github.com/XH-JMC/cta/model/tmmodel"
 	"sync"
 )
 

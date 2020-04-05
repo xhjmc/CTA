@@ -1,10 +1,10 @@
 package server_test
 
 import (
-	"cta/common/logs"
-	"cta/common/rpc/thrift/gen-go/rmservice"
-	"cta/common/rpc/thrift/handler"
-	"cta/common/rpc/thrift/server"
+	"github.com/XH-JMC/cta/common/logs"
+	"github.com/XH-JMC/cta/common/rpc/thrift/gen-go/rmservice"
+	"github.com/XH-JMC/cta/common/rpc/thrift/handler"
+	"github.com/XH-JMC/cta/common/rpc/thrift/server"
 	"sync"
 	"testing"
 )

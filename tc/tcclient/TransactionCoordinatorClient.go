@@ -1,10 +1,10 @@
 package tcclient
 
 import (
-	"cta/common/rpc/thrift/client"
-	"cta/common/rpc/thrift/gen-go/tcservice"
-	"cta/model/tcmodel"
-	"cta/variable"
+	"github.com/XH-JMC/cta/common/rpc/thrift/client"
+	"github.com/XH-JMC/cta/common/rpc/thrift/gen-go/tcservice"
+	"github.com/XH-JMC/cta/model/tcmodel"
+	"github.com/XH-JMC/cta/variable"
 	"sync"
 )
 

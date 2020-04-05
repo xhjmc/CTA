@@ -1,10 +1,10 @@
 package server
 
 import (
-	"cta/common/logs"
-	"cta/common/rpc/thrift/config"
-	"cta/common/rpc/thrift/factory"
-	"cta/util"
+	"github.com/XH-JMC/cta/common/logs"
+	"github.com/XH-JMC/cta/common/rpc/thrift/config"
+	"github.com/XH-JMC/cta/common/rpc/thrift/factory"
+	"github.com/XH-JMC/cta/util"
 	"github.com/apache/thrift/lib/go/thrift"
 )
 

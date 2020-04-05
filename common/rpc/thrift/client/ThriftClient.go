@@ -1,8 +1,8 @@
 package client
 
 import (
-	"cta/common/rpc/thrift/config"
-	"cta/common/rpc/thrift/factory"
+	"github.com/XH-JMC/cta/common/rpc/thrift/config"
+	"github.com/XH-JMC/cta/common/rpc/thrift/factory"
 	"github.com/apache/thrift/lib/go/thrift"
 	"net"
 )

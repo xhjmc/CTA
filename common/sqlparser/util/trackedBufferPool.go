@@ -42,7 +42,6 @@ func (p *TrackedBufferPool) Handle(handler func(*sqlparser.TrackedBuffer)) {
 	p.Put(buf)
 }
 
-
 func newTrackedBuffer() *sqlparser.TrackedBuffer {
 	return sqlparser.NewTrackedBuffer(func(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {
 		if node, ok := node.(*sqlparser.SQLVal); ok {

@@ -1,8 +1,8 @@
 package variable
 
 import (
-	"cta/conf"
-	"cta/constant"
+	"github.com/XH-JMC/cta/conf"
+	"github.com/XH-JMC/cta/constant"
 )
 
 var (

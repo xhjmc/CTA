@@ -1,8 +1,8 @@
 package mysqlparser
 
 import (
-	"cta/common/sqlparser/model"
-	"cta/common/sqlparser/util"
+	"github.com/XH-JMC/cta/common/sqlparser/model"
+	"github.com/XH-JMC/cta/common/sqlparser/util"
 	"github.com/xwb1989/sqlparser"
 	"strings"
 )

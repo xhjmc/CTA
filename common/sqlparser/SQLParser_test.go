@@ -1,10 +1,10 @@
 package sqlparser_test
 
 import (
-	"cta/common/sqlparser"
-	"cta/common/sqlparser/model"
 	"database/sql"
 	"fmt"
+	"github.com/XH-JMC/cta/common/sqlparser"
+	"github.com/XH-JMC/cta/common/sqlparser/model"
 	_ "github.com/go-sql-driver/mysql"
 	parser "github.com/xwb1989/sqlparser"
 	"testing"
