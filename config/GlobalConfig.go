@@ -30,6 +30,10 @@ func Get(key string) interface{} {
 	return config.Get(key)
 }
 
+func GetMap(key string) map[string]interface{} {
+	return config.GetMap(key)
+}
+
 func GetString(key string) string {
 	return config.GetString(key)
 }

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/XH-JMC/cta/common/publicwaitgroup"
 	"github.com/XH-JMC/cta/common/sqlparser/model"
-	"github.com/XH-JMC/cta/conf"
+	"github.com/XH-JMC/cta/config"
 	"github.com/XH-JMC/cta/constant"
 	"github.com/XH-JMC/cta/model/rmmodel"
 	"github.com/XH-JMC/cta/tc/tcclient"

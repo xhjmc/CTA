@@ -157,3 +157,28 @@ func InterfaceEqual(x, y interface{}) bool {
 
 	return reflect.DeepEqual(x, y)
 }
+
+// 将所有类型为map[interface{}]interface{}的子孙元素转换为map[string]interface{}
+func ConvertMapInterfaceInterface2MapStringInterface(container interface{}) interface{} {
+	switch c := container.(type) {
+	case []interface{}:
+		for i, item := range c {
+			c[i] = ConvertMapInterfaceInterface2MapStringInterface(item)
+		}
+		return c
+	case map[string]interface{}:
+		for key, value := range c {
+			c[key] = ConvertMapInterfaceInterface2MapStringInterface(value)
+		}
+		return c
+	case map[interface{}]interface{}:
+		ret := make(map[string]interface{})
+		for key, value := range c {
+			keyStr, _ := Interface2String(key)
+			ret[keyStr] = ConvertMapInterfaceInterface2MapStringInterface(value)
+		}
+		return ret
+	default:
+		return c
+	}
+}

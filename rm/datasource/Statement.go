@@ -168,7 +168,9 @@ func (s *Stmt) QueryContext(ctx context.Context, args ...interface{}) (*sql.Rows
 		case model.SELECT:
 			if parser, ok := s.sqlParser.(model.SQLSelectParser); ok {
 				if parser.IsSelectForUpdate() {
+					// todo select for update should flush lockKeys
 					s.addLockKey()
+					_ = s.ltx.globalLock()
 				}
 			}
 		}

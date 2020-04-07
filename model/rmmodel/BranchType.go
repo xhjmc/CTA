@@ -3,5 +3,6 @@ package rmmodel
 type BranchType int32
 
 const (
-	AT BranchType = iota
+	UnknownBranchType BranchType = iota
+	AT
 )

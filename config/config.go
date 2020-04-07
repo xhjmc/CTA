@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"github.com/XH-JMC/cta/util"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 )
@@ -24,8 +25,11 @@ func (c *Config) LoadFromJSON(jsonBytes []byte) error {
 }
 
 func (c *Config) LoadFromYaml(yamlBytes []byte) error {
-	err := yaml.Unmarshal(yamlBytes, &c.conf)
-	return err
+	if err := yaml.Unmarshal(yamlBytes, &c.conf); err != nil {
+		return err
+	}
+	c.conf = util.ConvertMapInterfaceInterface2MapStringInterface(c.conf).(map[string]interface{})
+	return nil
 }
 
 func (c *Config) LoadFromJSONFile(path string) error {
@@ -46,6 +50,11 @@ func (c *Config) LoadFromYamlFile(path string) error {
 
 func (c *Config) Get(key string) interface{} {
 	return c.conf[key]
+}
+
+func (c *Config) GetMap(key string) map[string]interface{} {
+	ret, _ := c.conf[key].(map[string]interface{})
+	return ret
 }
 
 func (c *Config) GetString(key string) string {

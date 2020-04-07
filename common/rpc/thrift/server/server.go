@@ -45,8 +45,6 @@ func (s *ThriftServer) Init() {
 	}
 
 	if len(s.conf) != 0 {
-		s.addr, _ = s.conf["addr"].(string)
-
 		if item, ok := s.conf["buffer_size"]; ok {
 			if bufferSize, err := util.Interface2Int(item); err != nil {
 				s.thriftConfig.BufferSize = bufferSize

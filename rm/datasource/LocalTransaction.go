@@ -101,7 +101,7 @@ func (ltx *LocalTransaction) PrepareContext(ctx context.Context, query string) (
 		stmt.afterImageArgsFunc = nil
 	case model.DELETE:
 		parser := sqlParser.(model.SQLDeleteParser)
-		imageQuery := fmt.Sprintf("select * from %s where %s", parser.GetTableName(), parser.GetCondition())
+		imageQuery := fmt.Sprintf("select * from %s where %s for update;", parser.GetTableName(), parser.GetCondition())
 		imageStmt, err := ltx.tx.PrepareContext(ctx, imageQuery)
 		if err != nil {
 			err = fmt.Errorf("xid: %s, branchId: %d, imageQuery: %s, prepare image stmt error: %s", ltx.xid, ltx.branchId, imageQuery, err)
@@ -116,7 +116,7 @@ func (ltx *LocalTransaction) PrepareContext(ctx context.Context, query string) (
 		stmt.afterImageArgsFunc = nil
 	case model.UPDATE:
 		parser := sqlParser.(model.SQLUpdateParser)
-		imageQuery := fmt.Sprintf("select * from %s where %s", parser.GetTableName(), parser.GetCondition())
+		imageQuery := fmt.Sprintf("select * from %s where %s for update;", parser.GetTableName(), parser.GetCondition())
 		imageStmt, err := ltx.tx.PrepareContext(ctx, imageQuery)
 		if err != nil {
 			err = fmt.Errorf("xid: %s, branchId: %d, imageQuery: %s, prepare image stmt error: %s", ltx.xid, ltx.branchId, imageQuery, err)
