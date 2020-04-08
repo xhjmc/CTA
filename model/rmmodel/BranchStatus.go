@@ -3,7 +3,7 @@ package rmmodel
 type BranchStatus int32
 
 const (
-	Unknown BranchStatus = iota // unused
+	UnknownBranchStatus BranchStatus = iota
 	Registered
 	PhaseOne_Done
 	PhaseOne_Failed
@@ -18,8 +18,8 @@ const (
 
 func (s BranchStatus) String() string {
 	switch s {
-	case Unknown:
-		return "Unknown"
+	case UnknownBranchStatus:
+		return "UnknownBranchStatus"
 	case Registered:
 		return "Registered"
 	case PhaseOne_Done:

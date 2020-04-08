@@ -35,5 +35,5 @@ func (m *MockTCClient) TransactionRollback(ctx context.Context, xid string) (tmm
 }
 
 func (m *MockTCClient) GetTransactionStatus(ctx context.Context, xid string) (tmmodel.TransactionStatus, error) {
-	return tmmodel.Unknown, nil
+	return tmmodel.UnknownTransactionStatus, nil
 }

@@ -3,7 +3,7 @@ package tmmodel
 type TransactionStatus int32
 
 const (
-	Unknown TransactionStatus = iota
+	UnknownTransactionStatus TransactionStatus = iota
 	Begin
 	Committing
 	CommitDone
@@ -15,8 +15,8 @@ const (
 
 func (s TransactionStatus) String() string {
 	switch s {
-	case Unknown:
-		return "Unknown"
+	case UnknownTransactionStatus:
+		return "UnknownTransactionStatus"
 	case Begin:
 		return "Begin"
 	case Committing:

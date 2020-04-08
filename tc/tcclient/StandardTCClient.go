@@ -77,7 +77,7 @@ func (c *StandardTCClient) TransactionCommit(ctx context.Context, xid string) (t
 	req.Xid = xid
 	resp, err := c.client.TransactionCommit(ctx, req)
 	if err != nil {
-		return tmmodel.Unknown, err
+		return tmmodel.UnknownTransactionStatus, err
 	}
 	if len(resp.Error) > 0 {
 		err = errors.New(resp.Error)
@@ -90,7 +90,7 @@ func (c *StandardTCClient) TransactionRollback(ctx context.Context, xid string) 
 	req.Xid = xid
 	resp, err := c.client.TransactionRollback(ctx, req)
 	if err != nil {
-		return tmmodel.Unknown, err
+		return tmmodel.UnknownTransactionStatus, err
 	}
 	if len(resp.Error) > 0 {
 		err = errors.New(resp.Error)
@@ -103,7 +103,7 @@ func (c *StandardTCClient) GetTransactionStatus(ctx context.Context, xid string)
 	req.Xid = xid
 	resp, err := c.client.GetTransactionStatus(ctx, req)
 	if err != nil {
-		return tmmodel.Unknown, err
+		return tmmodel.UnknownTransactionStatus, err
 	}
 	if len(resp.Error) > 0 {
 		err = errors.New(resp.Error)

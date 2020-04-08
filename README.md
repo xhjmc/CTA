@@ -21,3 +21,4 @@ type Discovery interface {
 
 ## 注意
 1. 目前本地事务执行的INSERT语句只支持单行插入。
+2. 本地事务sql语句暂不支持复合查询、多表查询、JOIN查询。
