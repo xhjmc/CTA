@@ -6,7 +6,7 @@ CREATE TABLE `undo_log`
     `undo_items`       longblob     NOT NULL,
     `log_status`       int(11)      NOT NULL,
     `create_timestamp` bigint(20)   NOT NULL,
-    UNIQUE KEY `ux_undo_log` (`xid`, `branch_id`)
+    UNIQUE KEY `uk_undo_log` (`xid`, `branch_id`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
-  DEFAULT CHARSET = utf8;
+  DEFAULT CHARSET = utf8mb4;

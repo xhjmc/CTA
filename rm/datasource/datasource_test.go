@@ -37,7 +37,7 @@ func init() {
 	})
 	variable.LoadFromConf()
 
-	tcclient.SetTransactionCoordinatorClient(&tcclient.MockTCClient{})
+	tcclient.SetTransactionCoordinatorClient(&tcclient.TCMockClient{})
 
 	db, _ := sql.Open(MySQL, Test_DataSourceName)
 	dataSource := NewDataSource(Test_DataSourceName, MySQL, db)
@@ -87,7 +87,7 @@ func TestInsertUndoLog(t *testing.T) {
 		panic(err)
 	}
 	ltx.branchId = Test_BranchId
-	ltx.addLockKey("test:999")
+	ltx.addLockKey("test", "999", "888")
 	ltx.addUndoItem(&UndoItem{
 		SQLType:   model.UPDATE,
 		TableName: "test",
@@ -179,8 +179,8 @@ func TestInsert(t *testing.T) {
 	}
 	ltx.branchId = Test_Insert_BranchId
 
-	query := "insert into test(id, col) values(?, ?);"
-	res, err := ltx.ExecContext(ctx, query, 111, "abc")
+	query := "insert into test(id, col) values(?, ?), (?, ?);"
+	res, err := ltx.ExecContext(ctx, query, 333, "3333", 444, "4444")
 	if err != nil {
 		panic(err)
 	}

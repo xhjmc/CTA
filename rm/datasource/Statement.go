@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/XH-JMC/cta/common/sqlparser/model"
+	"github.com/XH-JMC/cta/util"
+	"strconv"
 )
 
 type Stmt struct {
@@ -85,7 +87,7 @@ func (s *Stmt) execUpdateContext(ctx context.Context, args ...interface{}) (sql.
 		AfterImage:  afterImage,
 	}
 	s.ltx.addUndoItem(undoItem)
-	s.addLockKey()
+	s.addLockKeyFromImage(beforeImage)
 	return res, nil
 }
 
@@ -109,7 +111,7 @@ func (s *Stmt) execDeleteContext(ctx context.Context, args ...interface{}) (sql.
 		AfterImage:  nil,
 	}
 	s.ltx.addUndoItem(undoItem)
-	s.addLockKey()
+	s.addLockKeyFromImage(beforeImage)
 	return res, nil
 }
 
@@ -119,16 +121,16 @@ func (s *Stmt) execInsertContext(ctx context.Context, args ...interface{}) (sql.
 	if err != nil {
 		return nil, err
 	}
-	// todo bug: lastInsertId不一定是最大的id
+	// todo bug
 	lastId, _ := res.LastInsertId()
 	rowsAffected, _ := res.RowsAffected()
 
 	image := &Image{Rows: make([]ImageRow, 0)}
-	for i := lastId - rowsAffected + 1; i <= lastId; i++ {
+	for i := int64(0); i <= rowsAffected; i++ {
 		image.Rows = append(image.Rows, ImageRow{
 			BusinessTablePK: ImageField{
 				Name:  BusinessTablePK,
-				Value: i,
+				Value: lastId + i,
 			},
 		})
 	}
@@ -140,7 +142,7 @@ func (s *Stmt) execInsertContext(ctx context.Context, args ...interface{}) (sql.
 		AfterImage:  image,
 	}
 	s.ltx.addUndoItem(undoItem)
-	s.addLockKey()
+	s.addLockKeyFromImage(image)
 	return res, nil
 }
 
@@ -168,9 +170,15 @@ func (s *Stmt) QueryContext(ctx context.Context, args ...interface{}) (*sql.Rows
 		case model.SELECT:
 			if parser, ok := s.sqlParser.(model.SQLSelectParser); ok {
 				if parser.IsSelectForUpdate() {
-					// todo select for update should flush lockKeys
-					s.addLockKey()
-					_ = s.ltx.globalLock()
+					// select for update should flush lockKeys
+					beforeImageArgs := getImageArgs(s.beforeImageArgsFunc, args)
+					beforeImageRes, err := s.beforeImageStmt.QueryContext(ctx, beforeImageArgs...)
+					if err != nil {
+						return nil, fmt.Errorf("query before image error: %s", err)
+					}
+					beforeImage := generateUndoImage(beforeImageRes)
+					s.addLockKeyFromImage(beforeImage)
+					_ = s.ltx.flushGlobalLock()
 				}
 			}
 		}
@@ -188,7 +196,15 @@ func (s *Stmt) QueryRowContext(ctx context.Context, args ...interface{}) *sql.Ro
 		case model.SELECT:
 			if parser, ok := s.sqlParser.(model.SQLSelectParser); ok {
 				if parser.IsSelectForUpdate() {
-					s.addLockKey()
+					// select for update should flush lockKeys
+					beforeImageArgs := getImageArgs(s.beforeImageArgsFunc, args)
+					beforeImageRow := s.beforeImageStmt.QueryRowContext(ctx, beforeImageArgs...)
+					var pkId string
+					err := beforeImageRow.Scan(&pkId)
+					if err == nil && len(pkId) > 0 {
+						s.addLockKey(pkId)
+						_ = s.ltx.flushGlobalLock()
+					}
 				}
 			}
 		}
@@ -210,6 +226,19 @@ func (s *Stmt) Close() error {
 	return s.stmt.Close()
 }
 
-func (s *Stmt) addLockKey() {
-	s.ltx.addLockKey(s.sqlParser.GetTableName()) // lock the table
+func (s *Stmt) addLockKey(pkIds ...string) {
+	s.ltx.addLockKey(s.sqlParser.GetTableName(), pkIds...) // lock the table
+}
+
+func (s *Stmt) addLockKeyFromImage(image *Image) {
+	pkIds := make([]string, 0, len(image.Rows))
+	for _, row := range image.Rows {
+		pkId, err := util.Interface2Int64(row[BusinessTablePK].Value)
+		if err != nil {
+			continue
+		}
+		pkIds = append(pkIds, strconv.FormatInt(pkId, 10))
+
+	}
+	s.addLockKey(pkIds...)
 }

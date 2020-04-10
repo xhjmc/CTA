@@ -5,6 +5,6 @@ CREATE TABLE `test`
     `col`   varchar(100) NOT NULL
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
-  DEFAULT CHARSET = utf8;
+  DEFAULT CHARSET = utf8mb4;
 
 truncate test;

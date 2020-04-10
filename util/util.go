@@ -62,6 +62,8 @@ func Interface2Int64(item interface{}) (int64, error) {
 		return int64(val), nil
 	case string:
 		return strconv.ParseInt(val, 10, 64)
+	case []byte:
+		return strconv.ParseInt(string(val), 10, 64)
 	default:
 		return 0, errors.New("unsupported type")
 	}
@@ -93,6 +95,8 @@ func Interface2Float64(item interface{}) (float64, error) {
 		return val, nil
 	case string:
 		return strconv.ParseFloat(val, 64)
+	case []byte:
+		return strconv.ParseFloat(string(val), 64)
 	default:
 		return 0, errors.New("unsupported type")
 	}
@@ -120,12 +124,47 @@ func Interface2Bool(item interface{}) (bool, error) {
 		return val != 0, nil
 	case string:
 		return strconv.ParseBool(val)
+	case []byte:
+		return strconv.ParseBool(string(val))
 	default:
 		return false, errors.New("unsupported type")
 	}
 }
 
-func Interface2String(item interface{}) (string, bool) {
+func Interface2String(item interface{}) (string, error) {
+	switch val := item.(type) {
+	case byte:
+		return strconv.FormatInt(int64(val), 10), nil
+	case bool:
+		if val {
+			return "true", nil
+		} else {
+			return "false", nil
+		}
+	case int:
+		return strconv.FormatInt(int64(val), 10), nil
+	case int8:
+		return strconv.FormatInt(int64(val), 10), nil
+	case int16:
+		return strconv.FormatInt(int64(val), 10), nil
+	case int32:
+		return strconv.FormatInt(int64(val), 10), nil
+	case int64:
+		return strconv.FormatInt(val, 10), nil
+	case float32:
+		return strconv.FormatFloat(float64(val), 'f', 20, 64), nil
+	case float64:
+		return strconv.FormatFloat(val, 'f', 20, 64), nil
+	case string:
+		return val, nil
+	case []byte:
+		return string(val), nil
+	default:
+		return "", errors.New("unsupported type")
+	}
+}
+
+func interface2String(item interface{}) (string, bool) {
 	switch val := item.(type) {
 	case string:
 		return val, true
@@ -137,8 +176,8 @@ func Interface2String(item interface{}) (string, bool) {
 }
 
 func InterfaceEqual(x, y interface{}) bool {
-	xstr, xok := Interface2String(x)
-	ystr, yok := Interface2String(y)
+	xstr, xok := interface2String(x)
+	ystr, yok := interface2String(y)
 	if xok && yok {
 		return xstr == ystr
 	}
@@ -174,7 +213,7 @@ func ConvertMapInterfaceInterface2MapStringInterface(container interface{}) inte
 	case map[interface{}]interface{}:
 		ret := make(map[string]interface{})
 		for key, value := range c {
-			keyStr, _ := Interface2String(key)
+			keyStr, _ := interface2String(key)
 			ret[keyStr] = ConvertMapInterfaceInterface2MapStringInterface(value)
 		}
 		return ret

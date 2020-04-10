@@ -8,11 +8,11 @@ import (
 	"github.com/XH-JMC/cta/model/tmmodel"
 )
 
-type StandardTCClient struct {
+type TCThriftClient struct {
 	client *tcservice.TransactionCoordinatorServiceClient
 }
 
-func (c *StandardTCClient) BranchRegister(ctx context.Context, branchType rmmodel.BranchType, xid string, resourceId string, applicationName string) (int64, error) {
+func (c *TCThriftClient) BranchRegister(ctx context.Context, branchType rmmodel.BranchType, xid string, resourceId string, applicationName string) (int64, error) {
 	req := tcservice.NewBranchRegisterRequest()
 	req.BranchType = int32(branchType)
 	req.Xid = xid
@@ -28,7 +28,7 @@ func (c *StandardTCClient) BranchRegister(ctx context.Context, branchType rmmode
 	return resp.BranchId, err
 }
 
-func (c *StandardTCClient) BranchReport(ctx context.Context, branchType rmmodel.BranchType, xid string, branchId int64, status rmmodel.BranchStatus) error {
+func (c *TCThriftClient) BranchReport(ctx context.Context, branchType rmmodel.BranchType, xid string, branchId int64, status rmmodel.BranchStatus) error {
 	req := tcservice.NewBranchReportRequest()
 	req.BranchType = int32(branchType)
 	req.Xid = xid
@@ -44,7 +44,7 @@ func (c *StandardTCClient) BranchReport(ctx context.Context, branchType rmmodel.
 	return err
 }
 
-func (c *StandardTCClient) GlobalLock(ctx context.Context, branchType rmmodel.BranchType, xid string, resourceId string, lockKeys string) error {
+func (c *TCThriftClient) GlobalLock(ctx context.Context, branchType rmmodel.BranchType, xid string, resourceId string, lockKeys string) error {
 	req := tcservice.NewGlobalLockRequest()
 	req.BranchType = int32(branchType)
 	req.Xid = xid
@@ -60,7 +60,7 @@ func (c *StandardTCClient) GlobalLock(ctx context.Context, branchType rmmodel.Br
 	return err
 }
 
-func (c *StandardTCClient) TransactionBegin(ctx context.Context) (string, error) {
+func (c *TCThriftClient) TransactionBegin(ctx context.Context) (string, error) {
 	req := tcservice.NewTransactionBeginRequest()
 	resp, err := c.client.TransactionBegin(ctx, req)
 	if err != nil {
@@ -72,7 +72,7 @@ func (c *StandardTCClient) TransactionBegin(ctx context.Context) (string, error)
 	return resp.Xid, err
 }
 
-func (c *StandardTCClient) TransactionCommit(ctx context.Context, xid string) (tmmodel.TransactionStatus, error) {
+func (c *TCThriftClient) TransactionCommit(ctx context.Context, xid string) (tmmodel.TransactionStatus, error) {
 	req := tcservice.NewTransactionRequest()
 	req.Xid = xid
 	resp, err := c.client.TransactionCommit(ctx, req)
@@ -85,7 +85,7 @@ func (c *StandardTCClient) TransactionCommit(ctx context.Context, xid string) (t
 	return tmmodel.TransactionStatus(resp.TransactionStatus), err
 }
 
-func (c *StandardTCClient) TransactionRollback(ctx context.Context, xid string) (tmmodel.TransactionStatus, error) {
+func (c *TCThriftClient) TransactionRollback(ctx context.Context, xid string) (tmmodel.TransactionStatus, error) {
 	req := tcservice.NewTransactionRequest()
 	req.Xid = xid
 	resp, err := c.client.TransactionRollback(ctx, req)
@@ -98,7 +98,7 @@ func (c *StandardTCClient) TransactionRollback(ctx context.Context, xid string) 
 	return tmmodel.TransactionStatus(resp.TransactionStatus), err
 }
 
-func (c *StandardTCClient) GetTransactionStatus(ctx context.Context, xid string) (tmmodel.TransactionStatus, error) {
+func (c *TCThriftClient) GetTransactionStatus(ctx context.Context, xid string) (tmmodel.TransactionStatus, error) {
 	req := tcservice.NewTransactionRequest()
 	req.Xid = xid
 	resp, err := c.client.GetTransactionStatus(ctx, req)

@@ -8,6 +8,7 @@ import (
 	"github.com/XH-JMC/cta/common/sqlparser"
 	"github.com/XH-JMC/cta/common/sqlparser/model"
 	"github.com/XH-JMC/cta/model/rmmodel"
+	"strings"
 	"sync"
 	"time"
 )
@@ -134,6 +135,21 @@ func (ltx *LocalTransaction) PrepareContext(ctx context.Context, query string) (
 		stmt.beforeImageArgsFunc = nil
 		stmt.afterImageStmt = nil
 		stmt.afterImageArgsFunc = nil
+
+		parser := sqlParser.(model.SQLSelectParser)
+		if parser.IsSelectForUpdate() {
+			imageQuery := fmt.Sprintf("select %s from %s where %s for update;", BusinessTablePK, parser.GetTableName(), parser.GetCondition())
+			imageStmt, err := ltx.tx.PrepareContext(ctx, imageQuery)
+			if err != nil {
+				err = fmt.Errorf("xid: %s, branchId: %d, imageQuery: %s, prepare image stmt error: %s", ltx.xid, ltx.branchId, imageQuery, err)
+				logs.Info(err)
+			}
+			imageArgsFunc := func(args []interface{}) []interface{} {
+				return args
+			}
+			stmt.beforeImageStmt = imageStmt
+			stmt.beforeImageArgsFunc = imageArgsFunc
+		}
 	}
 	return stmt, nil
 }
@@ -213,10 +229,18 @@ func (ltx *LocalTransaction) insertUndoLog() error {
 	return log.Insert(ltx.tx)
 }
 
-func (ltx *LocalTransaction) addLockKey(lockKey string) {
-	ltx.lockKeys += lockKey + ";"
+func (ltx *LocalTransaction) addLockKey(tableName string, pkIds ...string) {
+	ltx.lockKeys += tableName + ":" + strings.Join(pkIds, ",") + ";"
 }
 
 func (ltx *LocalTransaction) globalLock() error {
 	return GetDataSourceManager().GlobalLock(context.Background(), rmmodel.AT, ltx.xid, ltx.resourceId, ltx.lockKeys)
+}
+
+func (ltx *LocalTransaction) flushGlobalLock() error {
+	err := ltx.globalLock()
+	if err == nil {
+		ltx.lockKeys = ""
+	}
+	return err
 }
