@@ -1,8 +1,9 @@
 # CTA
 
 ## 约定
-所有的业务库中包含undo_log表，所有业务表以自增pk_id为主键
+1. 所有的业务库中包含undo_log表，所有业务表以自增pk_id为主键
 `pk_id bigint(20) AUTO_INCREMENT PRIMARY KEY`
+2. 分支事务的客户端需要设置本地客户端的名称和TC服务端名称，用于服务发现，具体变量在variable/variable.go中。若没有自行接入服务发现，此处的变量填`ip:port`即可。
 
 ## 介绍
 ### 服务发现
@@ -20,5 +21,4 @@ type Discovery interface {
 ```
 
 ## 注意
-1. 目前本地事务执行的INSERT语句只支持单行插入。
-2. 本地事务sql语句暂不支持复合查询、多表查询、JOIN查询。
+1. 本地事务sql语句暂不支持复合查询、多表查询、JOIN查询。

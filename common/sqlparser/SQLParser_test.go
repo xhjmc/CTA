@@ -13,7 +13,7 @@ import (
 const MySQL = "mysql"
 
 func TestParser(t *testing.T) {
-	db, _ := sql.Open(MySQL, "jmc:chenjinming@tcp(127.0.0.1:3306)/cta?charset=utf8")
+	db, _ := sql.Open(MySQL, "jmc:chenjinming@tcp(127.0.0.1:3306)/cta?charset=utf8mb4")
 	q := "select * from test where id = :v1;"
 	res := db.QueryRow(q, 1)
 	var a, b interface{}

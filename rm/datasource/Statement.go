@@ -121,12 +121,11 @@ func (s *Stmt) execInsertContext(ctx context.Context, args ...interface{}) (sql.
 	if err != nil {
 		return nil, err
 	}
-	// todo bug
 	lastId, _ := res.LastInsertId()
 	rowsAffected, _ := res.RowsAffected()
 
 	image := &Image{Rows: make([]ImageRow, 0)}
-	for i := int64(0); i <= rowsAffected; i++ {
+	for i := int64(0); i < rowsAffected; i++ {
 		image.Rows = append(image.Rows, ImageRow{
 			BusinessTablePK: ImageField{
 				Name:  BusinessTablePK,

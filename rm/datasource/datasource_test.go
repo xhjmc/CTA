@@ -19,7 +19,7 @@ import (
 const (
 	MySQL               = "mysql"
 	Test_XID            = "127.0.0.1:5460:1"
-	Test_DataSourceName = "jmc:chenjinming@tcp(127.0.0.1:3306)/cta?charset=utf8"
+	Test_DataSourceName = "jmc:chenjinming@tcp(127.0.0.1:3306)/cta?charset=utf8mb4"
 )
 
 const (
@@ -179,8 +179,8 @@ func TestInsert(t *testing.T) {
 	}
 	ltx.branchId = Test_Insert_BranchId
 
-	query := "insert into test(id, col) values(?, ?), (?, ?);"
-	res, err := ltx.ExecContext(ctx, query, 333, "3333", 444, "4444")
+	query := "insert into test(id, col) values(?, ?), (?, ?), (?, ?);"
+	res, err := ltx.ExecContext(ctx, query, 333, "3333", 444, "4444", 555, "5555")
 	if err != nil {
 		panic(err)
 	}
@@ -245,7 +245,7 @@ func TestUpdate(t *testing.T) {
 func TestCommit(t *testing.T) {
 	ctx := context.Background()
 	xid := Test_XID
-	branchId := Test_Delete_BranchId
+	branchId := Test_Insert_BranchId
 	resourceId := Test_DataSourceName
 	status, err := GetDataSourceManager().BranchCommit(ctx, rmmodel.AT, xid, branchId, resourceId)
 	fmt.Println(status.String(), err)
@@ -255,7 +255,7 @@ func TestCommit(t *testing.T) {
 func TestRollback(t *testing.T) {
 	ctx := context.Background()
 	xid := Test_XID
-	branchId := Test_Delete_BranchId
+	branchId := Test_Insert_BranchId
 	resourceId := Test_DataSourceName
 	status, err := GetDataSourceManager().BranchRollback(ctx, rmmodel.AT, xid, branchId, resourceId)
 	fmt.Println(status.String(), err)
