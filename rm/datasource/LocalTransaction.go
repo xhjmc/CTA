@@ -93,6 +93,7 @@ func (ltx *LocalTransaction) prepareContext(ctx context.Context, query string, p
 	if err != nil {
 		err = fmt.Errorf("xid: %s, branchId: %d, NewSQLParser error: %s", ltx.xid, ltx.branchId, err)
 		logs.Info(err)
+		return nil, err
 	}
 
 	stmt := &Stmt{
@@ -199,9 +200,12 @@ func (ltx *LocalTransaction) Query(query string, args ...interface{}) (*sql.Rows
 
 // 复用PrepareContext和Stmt.QueryRowContext的逻辑
 func (ltx *LocalTransaction) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	stmt, _ := ltx.prepareContext(ctx, query, func(ctx context.Context, query string) (Statement, error) {
+	stmt, err := ltx.prepareContext(ctx, query, func(ctx context.Context, query string) (Statement, error) {
 		return NewFakeStmt(ltx.tx, query), nil
 	})
+	if err != nil {
+		return nil
+	}
 	defer stmt.Close()
 	return stmt.QueryRowContext(ctx, args...)
 }

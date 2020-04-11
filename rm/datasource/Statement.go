@@ -29,15 +29,15 @@ func NewFakeStmt(tx *sql.Tx, query string) *FakeStmt {
 }
 
 func (s *FakeStmt) ExecContext(ctx context.Context, args ...interface{}) (sql.Result, error) {
-	return s.tx.ExecContext(ctx, s.query, args)
+	return s.tx.ExecContext(ctx, s.query, args...)
 }
 
 func (s *FakeStmt) QueryContext(ctx context.Context, args ...interface{}) (*sql.Rows, error) {
-	return s.tx.QueryContext(ctx, s.query, args)
+	return s.tx.QueryContext(ctx, s.query, args...)
 }
 
 func (s *FakeStmt) QueryRowContext(ctx context.Context, args ...interface{}) *sql.Row {
-	return s.tx.QueryRowContext(ctx, s.query, args)
+	return s.tx.QueryRowContext(ctx, s.query, args...)
 }
 
 func (s *FakeStmt) Close() error {

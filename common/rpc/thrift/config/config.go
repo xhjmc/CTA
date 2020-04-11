@@ -6,9 +6,9 @@ const (
 	DefaultBufferSize       = 8192
 	DefaultFramed           = true
 	DefaultProtocol         = "binary"
-	DefaultDialTimeout      = time.Millisecond * 400
-	DefaultReadWriteTimeout = time.Second * 2
-	DefaultTimeout          = time.Second * 2
+	DefaultDialTimeout      = time.Second
+	DefaultReadWriteTimeout = time.Second * 5
+	DefaultTimeout          = time.Second * 5
 )
 
 type ThriftConfig struct {

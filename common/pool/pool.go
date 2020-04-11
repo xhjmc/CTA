@@ -2,6 +2,7 @@ package pool
 
 import (
 	"context"
+	"errors"
 	"github.com/jolestar/go-commons-pool/v2"
 	"sync"
 )
@@ -83,7 +84,23 @@ func (p *ObjectPool) Init(ctx context.Context) {
 				return p.objFactory.Validate(ctx, obj.Object)
 			}
 			return true
-		}, nil, nil)
+		}, func(ctx context.Context, obj *pool.PooledObject) error {
+			if p.objFactory.Validate != nil {
+				validate := p.objFactory.Validate(ctx, obj.Object)
+				if !validate {
+					return errors.New("verification failed")
+				}
+			}
+			return nil
+		}, func(ctx context.Context, obj *pool.PooledObject) error {
+			if p.objFactory.Validate != nil {
+				validate := p.objFactory.Validate(ctx, obj.Object)
+				if !validate {
+					return errors.New("verification failed")
+				}
+			}
+			return nil
+		})
 
 		p.objectPool = pool.NewObjectPool(ctx, factory, p.conf)
 	})
