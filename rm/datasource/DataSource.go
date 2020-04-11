@@ -36,7 +36,7 @@ func (d *DataSource) Begin(ctx context.Context, xid string) (*LocalTransaction, 
 		}
 	}
 
-	branchId, err := GetDataSourceManager().BranchRegister(ctx, rmmodel.AT, xid, d.resourceId, variable.ApplicationName)
+	branchId, err := GetDataSourceManager().BranchRegister(ctx, rmmodel.AT, xid, d.resourceId, variable.GetApplicationName())
 	if err != nil {
 		_ = tx.Rollback()
 		return nil, err

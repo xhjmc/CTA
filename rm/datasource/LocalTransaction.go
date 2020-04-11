@@ -76,7 +76,13 @@ func (ltx *LocalTransaction) RollBack() error {
 
 // 根据sql语句，构建SQLParser，并生成对应的stmt和镜像stmt
 func (ltx *LocalTransaction) PrepareContext(ctx context.Context, query string) (*Stmt, error) {
-	prepareStmt, err := ltx.tx.PrepareContext(ctx, query)
+	return ltx.prepareContext(ctx, query, func(ctx context.Context, query string) (Statement, error) {
+		return ltx.tx.PrepareContext(ctx, query)
+	})
+}
+
+func (ltx *LocalTransaction) prepareContext(ctx context.Context, query string, prepareContextFunc func(ctx context.Context, query string) (Statement, error)) (*Stmt, error) {
+	prepareStmt, err := prepareContextFunc(ctx, query)
 	if err != nil {
 		err = fmt.Errorf("xid: %s, branchId: %d, PrepareContext error: %s", ltx.xid, ltx.branchId, err)
 		logs.Info(err)
@@ -103,7 +109,8 @@ func (ltx *LocalTransaction) PrepareContext(ctx context.Context, query string) (
 	case model.DELETE:
 		parser := sqlParser.(model.SQLDeleteParser)
 		imageQuery := fmt.Sprintf("select * from %s where %s for update;", parser.GetTableName(), parser.GetCondition())
-		imageStmt, err := ltx.tx.PrepareContext(ctx, imageQuery)
+
+		imageStmt, err := prepareContextFunc(ctx, imageQuery)
 		if err != nil {
 			err = fmt.Errorf("xid: %s, branchId: %d, imageQuery: %s, prepare image stmt error: %s", ltx.xid, ltx.branchId, imageQuery, err)
 			logs.Info(err)
@@ -118,7 +125,7 @@ func (ltx *LocalTransaction) PrepareContext(ctx context.Context, query string) (
 	case model.UPDATE:
 		parser := sqlParser.(model.SQLUpdateParser)
 		imageQuery := fmt.Sprintf("select * from %s where %s for update;", parser.GetTableName(), parser.GetCondition())
-		imageStmt, err := ltx.tx.PrepareContext(ctx, imageQuery)
+		imageStmt, err := prepareContextFunc(ctx, imageQuery)
 		if err != nil {
 			err = fmt.Errorf("xid: %s, branchId: %d, imageQuery: %s, prepare image stmt error: %s", ltx.xid, ltx.branchId, imageQuery, err)
 			logs.Info(err)
@@ -139,7 +146,7 @@ func (ltx *LocalTransaction) PrepareContext(ctx context.Context, query string) (
 		parser := sqlParser.(model.SQLSelectParser)
 		if parser.IsSelectForUpdate() {
 			imageQuery := fmt.Sprintf("select %s from %s where %s for update;", BusinessTablePK, parser.GetTableName(), parser.GetCondition())
-			imageStmt, err := ltx.tx.PrepareContext(ctx, imageQuery)
+			imageStmt, err := prepareContextFunc(ctx, imageQuery)
 			if err != nil {
 				err = fmt.Errorf("xid: %s, branchId: %d, imageQuery: %s, prepare image stmt error: %s", ltx.xid, ltx.branchId, imageQuery, err)
 				logs.Info(err)
@@ -158,9 +165,11 @@ func (ltx *LocalTransaction) Prepare(query string) (*Stmt, error) {
 	return ltx.PrepareContext(context.Background(), query)
 }
 
-// 复用PrepareContext和Stmt.ExecContext的逻辑
+// 复用prepareContext和Stmt.ExecContext的逻辑
 func (ltx *LocalTransaction) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	stmt, err := ltx.PrepareContext(ctx, query)
+	stmt, err := ltx.prepareContext(ctx, query, func(ctx context.Context, query string) (Statement, error) {
+		return NewFakeStmt(ltx.tx, query), nil
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -172,9 +181,11 @@ func (ltx *LocalTransaction) Exec(query string, args ...interface{}) (sql.Result
 	return ltx.ExecContext(context.Background(), query, args...)
 }
 
-// 复用PrepareContext和Stmt.QueryContext的逻辑
+// 复用prepareContext和Stmt.QueryContext的逻辑
 func (ltx *LocalTransaction) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	stmt, err := ltx.PrepareContext(ctx, query)
+	stmt, err := ltx.prepareContext(ctx, query, func(ctx context.Context, query string) (Statement, error) {
+		return NewFakeStmt(ltx.tx, query), nil
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -188,10 +199,9 @@ func (ltx *LocalTransaction) Query(query string, args ...interface{}) (*sql.Rows
 
 // 复用PrepareContext和Stmt.QueryRowContext的逻辑
 func (ltx *LocalTransaction) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	stmt, err := ltx.PrepareContext(ctx, query)
-	if err != nil {
-		return nil
-	}
+	stmt, _ := ltx.prepareContext(ctx, query, func(ctx context.Context, query string) (Statement, error) {
+		return NewFakeStmt(ltx.tx, query), nil
+	})
 	defer stmt.Close()
 	return stmt.QueryRowContext(ctx, args...)
 }

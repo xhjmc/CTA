@@ -21,7 +21,7 @@ func SetTransactionCoordinatorClient(client tcmodel.TransactionCoordinator) {
 
 func GetTransactionCoordinatorClient() tcmodel.TransactionCoordinator {
 	tcClientOnce.Do(func() {
-		tClient := client.TClientWithPoolFactory3(variable.TCServiceName)
+		tClient := client.TClientWithPoolFactory3(variable.GetTCServiceName())
 		tcClient = &TCThriftClient{
 			client: tcservice.NewTransactionCoordinatorServiceClient(tClient),
 		}

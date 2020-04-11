@@ -9,12 +9,47 @@ import (
 	"strconv"
 )
 
+type Statement interface {
+	ExecContext(ctx context.Context, args ...interface{}) (sql.Result, error)
+	QueryContext(ctx context.Context, args ...interface{}) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, args ...interface{}) *sql.Row
+	Close() error
+}
+
+type FakeStmt struct {
+	tx    *sql.Tx
+	query string
+}
+
+func NewFakeStmt(tx *sql.Tx, query string) *FakeStmt {
+	return &FakeStmt{
+		tx:    tx,
+		query: query,
+	}
+}
+
+func (s *FakeStmt) ExecContext(ctx context.Context, args ...interface{}) (sql.Result, error) {
+	return s.tx.ExecContext(ctx, s.query, args)
+}
+
+func (s *FakeStmt) QueryContext(ctx context.Context, args ...interface{}) (*sql.Rows, error) {
+	return s.tx.QueryContext(ctx, s.query, args)
+}
+
+func (s *FakeStmt) QueryRowContext(ctx context.Context, args ...interface{}) *sql.Row {
+	return s.tx.QueryRowContext(ctx, s.query, args)
+}
+
+func (s *FakeStmt) Close() error {
+	return nil
+}
+
 type Stmt struct {
 	ltx                 *LocalTransaction
-	stmt                *sql.Stmt
-	beforeImageStmt     *sql.Stmt
+	stmt                Statement
+	beforeImageStmt     Statement
 	beforeImageArgsFunc func(args []interface{}) []interface{}
-	afterImageStmt      *sql.Stmt
+	afterImageStmt      Statement
 	afterImageArgsFunc  func(args []interface{}) []interface{}
 	sqlParser           model.SQLParser
 }
@@ -169,15 +204,13 @@ func (s *Stmt) QueryContext(ctx context.Context, args ...interface{}) (*sql.Rows
 		case model.SELECT:
 			if parser, ok := s.sqlParser.(model.SQLSelectParser); ok {
 				if parser.IsSelectForUpdate() {
-					// select for update should flush lockKeys
-					beforeImageArgs := getImageArgs(s.beforeImageArgsFunc, args)
+ 					beforeImageArgs := getImageArgs(s.beforeImageArgsFunc, args)
 					beforeImageRes, err := s.beforeImageStmt.QueryContext(ctx, beforeImageArgs...)
 					if err != nil {
 						return nil, fmt.Errorf("query before image error: %s", err)
 					}
 					beforeImage := generateUndoImage(beforeImageRes)
 					s.addLockKeyFromImage(beforeImage)
-					_ = s.ltx.flushGlobalLock()
 				}
 			}
 		}
@@ -195,14 +228,12 @@ func (s *Stmt) QueryRowContext(ctx context.Context, args ...interface{}) *sql.Ro
 		case model.SELECT:
 			if parser, ok := s.sqlParser.(model.SQLSelectParser); ok {
 				if parser.IsSelectForUpdate() {
-					// select for update should flush lockKeys
 					beforeImageArgs := getImageArgs(s.beforeImageArgsFunc, args)
 					beforeImageRow := s.beforeImageStmt.QueryRowContext(ctx, beforeImageArgs...)
 					var pkId string
 					err := beforeImageRow.Scan(&pkId)
 					if err == nil && len(pkId) > 0 {
 						s.addLockKey(pkId)
-						_ = s.ltx.flushGlobalLock()
 					}
 				}
 			}

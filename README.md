@@ -4,6 +4,7 @@
 1. 所有的业务库中包含undo_log表，所有业务表以自增pk_id为主键
 `pk_id bigint(20) AUTO_INCREMENT PRIMARY KEY`
 2. 分支事务的客户端需要设置本地客户端的名称和TC服务端名称，用于服务发现，具体变量在variable/variable.go中。若没有自行接入服务发现，此处的变量填`ip:port`即可。
+3. 全局事务的客户端需要设置TC服务端名称，设置原因和方法同第2点一样。
 
 ## 介绍
 ### 服务发现
