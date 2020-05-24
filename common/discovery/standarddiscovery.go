@@ -8,14 +8,14 @@ type StandardDiscovery struct {
 }
 
 func DefaultDiscovery() *StandardDiscovery {
-	return GenerateStandardDiscovery(func(name string) (string, error) {
+	return NewStandardDiscovery(func(name string) (string, error) {
 		return name, nil
 	}, func(name string) ([]string, error) {
 		return []string{name}, nil
 	})
 }
 
-func GenerateStandardDiscovery(GetAddrFunc func(name string) (string, error),
+func NewStandardDiscovery(GetAddrFunc func(name string) (string, error),
 	GetAddrListFunc func(name string) ([]string, error)) *StandardDiscovery {
 	return &StandardDiscovery{
 		GetAddrFunc:     GetAddrFunc,

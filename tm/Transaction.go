@@ -51,7 +51,3 @@ func (tx *Transaction) Rollback() (err error) {
 	tx.status, err = GetTransactionManager().TransactionRollback(tx.ctx, tx.xid)
 	return err
 }
-
-func (tx *Transaction) Exec(f func(ctx context.Context) error) error {
-	return f(tx.ctx)
-}
